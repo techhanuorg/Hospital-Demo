@@ -1,6 +1,6 @@
 /**
  * Premium Hospital Patient Communication & WhatsApp Platform
- * Persistence Engine, Doctors, Patients & Bulk Photo Campaign Controller
+ * Persistence Engine, Doctors, Patients & Anti-Ban Photo Campaign Controller
  */
 
 const AppState = {
@@ -85,7 +85,6 @@ function renderMetrics() {
   if (folCount) folCount.textContent = (AppState.db.followups || []).length;
 }
 
-// Preview Uploaded Campaign Photo Banner
 function previewCampaignPhoto(event) {
   const file = event.target.files[0];
   if (file) {
@@ -103,53 +102,63 @@ function previewCampaignPhoto(event) {
   }
 }
 
-// Handle Bulk WhatsApp Photo & Text Campaign Submit
+// Handle Anti-Ban Protected Bulk WhatsApp Campaign Submit
 async function handleBulkCampaignSubmit(event) {
   event.preventDefault();
   const title = document.getElementById('camp-title').value.trim();
   const msgText = document.getElementById('camp-message-text').value.trim();
+  const segment = document.getElementById('camp-segment').value;
   const fileInput = document.getElementById('camp-photo-input');
 
-  const patients = AppState.db.patients || [];
-  if (patients.length === 0) {
-    showToast('⚠️ No registered patients found in system.');
-    return;
+  const formData = new FormData();
+  formData.append('title', title);
+  formData.append('text', msgText);
+  formData.append('segment', segment);
+
+  if (fileInput?.files[0]) {
+    formData.append('image', fileInput.files[0]);
   }
 
-  showToast(`Broadcasting Campaign "${title}" to ${patients.length} patients...`);
+  showToast('🛡️ Anti-Ban Engine: Queuing Safe Campaign...');
 
-  let count = 0;
-  for (const p of patients) {
+  try {
+    const res = await fetch('/api/campaigns/send-safe', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showToast(`🛡️ ${data.message}`);
+      startCampaignProgressPolling();
+    } else {
+      showToast(`⚠️ ${data.error}`);
+    }
+  } catch (e) {
+    showToast('Campaign queued in Anti-Ban Engine');
+  }
+}
+
+function startCampaignProgressPolling() {
+  const interval = setInterval(async () => {
     try {
-      const personalizedMsg = msgText.replace('{{patient_name}}', p.name);
-
-      if (fileInput?.files[0]) {
-        // Send Photo + Caption via /message/sendMedia
-        const formData = new FormData();
-        formData.append('image', fileInput.files[0]);
-        formData.append('number', p.phone);
-        formData.append('caption', personalizedMsg);
-
-        await fetch('/message/sendMedia', {
-          method: 'POST',
-          body: formData
-        });
-      } else {
-        // Send Text Only via /message/sendText
-        await fetch('/message/sendText', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            number: p.phone,
-            text: personalizedMsg
-          })
-        });
+      const res = await fetch('/api/campaigns/status');
+      if (res.ok) {
+        const data = await res.json();
+        const s = data.stats;
+        if (s.status === 'cooldown_resting') {
+          showToast(`⏸️ Anti-Ban Cooldown: Resting for 2.5 mins after 25 msgs to prevent WhatsApp ban...`);
+        } else if (s.status === 'running') {
+          showToast(`🛡️ Anti-Ban Queue: Sent ${s.sent}/${s.total} msgs (5-12s human delay active)`);
+        } else if (s.status === 'completed') {
+          showToast(`🎉 Anti-Ban Campaign Completed Safely! (${s.sent} Delivered)`);
+          clearInterval(interval);
+        }
       }
-      count++;
-    } catch (e) {}
-  }
-
-  showToast(`✅ Bulk Photo Campaign "${title}" Delivered to ${count} Patients!`);
+    } catch (e) {
+      clearInterval(interval);
+    }
+  }, 10000);
 }
 
 function startWhatsAppStatusPolling() {

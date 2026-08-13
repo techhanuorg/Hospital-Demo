@@ -91,17 +91,74 @@ async function callGroqAI(prompt, systemPrompt) {
   return 'Thank you for messaging City Hospital. Our team is at your service.';
 }
 
-async function extractPatientDetailsFromText(userText) {
-  const systemPrompt = `You are a medical data extraction bot. Return STRICT JSON ONLY: {"name": "Name or Unknown", "age": "Age or Unknown", "gender": "Male/Female or Unknown"}`;
-  try {
-    const rawReply = await callGroqAI(userText, systemPrompt);
-    const jsonMatch = rawReply.match(/\{[\s\S]*\}/);
-    if (jsonMatch) return JSON.parse(jsonMatch[0]);
-  } catch (e) {}
-  return { name: userText, age: 'Unknown', gender: 'Unknown' };
+// Spintax Message Variation (Prevents Exact Duplicate Text Spam Fingerprinting)
+function processSpintax(text) {
+  return text.replace(/\{([^{}]+)\}/g, (match, choices) => {
+    const options = choices.split('|');
+    return options[Math.floor(Math.random() * options.length)];
+  });
 }
 
-const patientSessions = {};
+// ==================== ANTI-BAN CAMPAIGN QUEUE ENGINE ====================
+let campaignQueue = [];
+let isCampaignRunning = false;
+let campaignStats = { total: 0, sent: 0, failed: 0, status: 'idle', currentBatch: 0 };
+
+async function processAntiBanCampaignQueue() {
+  if (isCampaignRunning || campaignQueue.length === 0) return;
+  isCampaignRunning = true;
+  campaignStats.status = 'running';
+
+  console.log(`🛡️ Anti-Ban Engine: Starting campaign broadcast for ${campaignQueue.length} patients...`);
+
+  let batchCounter = 0;
+
+  while (campaignQueue.length > 0) {
+    const item = campaignQueue.shift();
+    batchCounter++;
+    campaignStats.currentBatch = batchCounter;
+
+    try {
+      if (!waSocket || waConnectionState.status !== 'connected') {
+        console.warn('WhatsApp disconnected during campaign. Pausing queue...');
+        campaignQueue.unshift(item);
+        campaignStats.status = 'paused_disconnected';
+        break;
+      }
+
+      // Format Spintax text variation
+      const variedText = processSpintax(item.text);
+
+      if (item.hasPhoto && item.photoPath) {
+        await waSocket.sendMessage(item.jid, { image: { url: item.photoPath }, caption: variedText });
+      } else {
+        await waSocket.sendMessage(item.jid, { text: variedText });
+      }
+
+      campaignStats.sent++;
+      console.log(`[Anti-Ban Queue] (${campaignStats.sent}/${campaignStats.total}) Delivered to ${item.phone}`);
+    } catch (e) {
+      campaignStats.failed++;
+      console.error(`[Anti-Ban Queue] Failed for ${item.phone}:`, e.message);
+    }
+
+    // 1. HUMAN-LIKE RANDOM DELAY (Between 5 to 12 seconds per message)
+    const randomDelay = Math.floor(Math.random() * (12000 - 5000 + 1)) + 5000;
+    await new Promise(resolve => setTimeout(resolve, randomDelay));
+
+    // 2. BATCH COOLDOWN PAUSE (Every 25 messages, rest for 2.5 minutes / 150 seconds)
+    if (batchCounter % 25 === 0 && campaignQueue.length > 0) {
+      console.log(`⏸️ Anti-Ban Cooldown: Resting for 150s after 25 messages to keep number safe...`);
+      campaignStats.status = 'cooldown_resting';
+      await new Promise(resolve => setTimeout(resolve, 150000));
+      campaignStats.status = 'running';
+    }
+  }
+
+  isCampaignRunning = false;
+  if (campaignQueue.length === 0) campaignStats.status = 'completed';
+  console.log('🎉 Anti-Ban Campaign Processing Finished!');
+}
 
 // Baileys WhatsApp Engine
 let waSocket = null;
@@ -154,55 +211,12 @@ async function connectToWhatsApp() {
             const senderJid = msg.key.remoteJid;
             const phone = '+' + senderJid.split('@')[0];
             const textMsg = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || '').trim();
-            const isImage = !!msg.message?.imageMessage;
 
-            if (!patientSessions[phone]) {
-              patientSessions[phone] = { step: 'ASK_LANG', language: 'English', name: '', age: '', gender: '', phone };
-            }
-            const session = patientSessions[phone];
-
-            if (session.step === 'ASK_LANG') {
-              session.step = 'ASK_DETAILS';
-              session.language = textMsg || 'English';
-              await waSocket.sendMessage(senderJid, { text: `🏥 Welcome to City Hospital!\nLanguage: ${session.language}\n\nStep 1/3: Please reply with your Name, Age, and Gender (e.g. "Rahul Sharma, 28, Male").` });
-            } else if (session.step === 'ASK_DETAILS') {
-              const details = await extractPatientDetailsFromText(textMsg);
-              session.name = details.name !== 'Unknown' ? details.name : textMsg;
-              session.age = details.age;
-              session.gender = details.gender;
-              session.step = 'ASK_PRESCRIPTION';
-
-              db.addPatient({ name: session.name, phone: session.phone, age: session.age, gender: session.gender, language: session.language, doctor: 'Dr. Sarah Smith', consent: 'Opted In' });
-
-              await waSocket.sendMessage(senderJid, { text: `✅ Patient Registered: ${session.name} (${session.age} Yrs, ${session.gender})\n\nStep 2/3: Please upload your Prescription Photo or medical complaint.` });
-            } else if (session.step === 'ASK_PRESCRIPTION') {
-              session.step = 'BOOK_SLOT';
-              const dueDate = new Date();
-              dueDate.setDate(dueDate.getDate() + 7);
-              const dateStr = dueDate.toISOString().split('T')[0];
-
-              db.addFollowup({ patientName: session.name, phone: session.phone, doctor: 'Dr. Sarah Smith', reason: 'Prescription Follow-up', dueDate: dateStr, status: 'Pending', autoReminder: true, source: 'WhatsApp Prescription Bot' });
-
-              const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-              const availableSlots = db.getAvailableSlots('doc-1', tomorrowStr);
-
-              await waSocket.sendMessage(senderJid, { text: `✅ Prescription Received!\n\nStep 3/3: Select Available Slot for ${tomorrowStr} with Dr. Sarah Smith:\n\n` + availableSlots.map((s, idx) => `${idx + 1}. ${s}`).join('\n') });
-            } else if (session.step === 'BOOK_SLOT') {
-              const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-              const availableSlots = db.getAvailableSlots('doc-1', tomorrowStr);
-              const slotIdx = parseInt(textMsg) - 1;
-              const chosenSlot = (slotIdx >= 0 && slotIdx < availableSlots.length) ? availableSlots[slotIdx] : availableSlots[0];
-
-              try {
-                const appt = db.addAppointment({ patientName: session.name, phone: session.phone, doctorId: 'doc-1', doctorName: 'Dr. Sarah Smith', date: tomorrowStr, time: chosenSlot, status: 'Confirmed' });
-                session.step = 'COMPLETED';
-                await waSocket.sendMessage(senderJid, { text: `🎉 Appointment Confirmed!\n📋 ${appt.token}\n👨‍⚕️ Dr. Sarah Smith\n📅 ${tomorrowStr} at ${chosenSlot}` });
-              } catch (e) {
-                await waSocket.sendMessage(senderJid, { text: `⚠️ ${e.message}` });
-              }
-            } else {
-              const reply = await callGroqAI(textMsg, `You are a helpful receptionist for City Hospital responding in ${session.language}.`);
-              await waSocket.sendMessage(senderJid, { text: reply });
+            // Auto-Unsubscribe / Opt-out Guard
+            if (textMsg.toUpperCase() === 'STOP' || textMsg.toUpperCase() === 'UNSUBSCRIBE') {
+              db.addPatient({ phone, consent: 'Opted Out' });
+              await waSocket.sendMessage(senderJid, { text: 'You have been unsubscribed from WhatsApp broadcasts.' });
+              continue;
             }
           }
         }
@@ -231,38 +245,51 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   res.json({ success: true, url: fileUrl, filename: req.file.filename, path: req.file.path });
 });
 
-app.post('/api/patients', (req, res) => res.json({ success: true, patient: db.addPatient(req.body) }));
-app.post('/api/doctors', (req, res) => res.json({ success: true, doctor: db.addDoctor(req.body) }));
-app.post('/api/appointments', (req, res) => {
-  try { res.json({ success: true, appointment: db.addAppointment(req.body) }); }
-  catch (e) { res.status(400).json({ error: e.message }); }
-});
-app.post('/api/followups', (req, res) => res.json({ success: true, followup: db.addFollowup(req.body) }));
-
-// 5. Bulk WhatsApp Media/Photo Campaign Endpoint (Evolution API Spec)
-app.post('/message/sendMedia', upload.single('image'), async (req, res) => {
+// Safe Anti-Ban Bulk Campaign Endpoint
+app.post('/api/campaigns/send-safe', upload.single('image'), async (req, res) => {
   try {
-    const { number, caption } = req.body;
-    let imageUrl = req.body.imageUrl;
+    const { title, text, segment } = req.body;
+    let photoPath = req.file ? req.file.path : null;
 
-    if (req.file) {
-      imageUrl = req.file.path;
+    const allPatients = db.getPatients();
+    // Exclude Opted Out Patients automatically
+    const eligiblePatients = allPatients.filter(p => p.consent !== 'Opted Out');
+
+    if (eligiblePatients.length === 0) {
+      return res.status(400).json({ error: 'No eligible opted-in patients found.' });
     }
 
-    if (!waSocket || waConnectionState.status !== 'connected') {
-      return res.status(400).json({ error: 'WhatsApp is not connected.' });
-    }
+    campaignQueue = eligiblePatients.map(p => ({
+      jid: p.phone.replace(/\D/g, '') + '@s.whatsapp.net',
+      phone: p.phone,
+      text: text.replace('{{patient_name}}', p.name),
+      hasPhoto: !!photoPath,
+      photoPath: photoPath
+    }));
 
-    const formattedNumber = number.replace(/\D/g, '') + '@s.whatsapp.net';
-    const sent = await waSocket.sendMessage(formattedNumber, {
-      image: { url: imageUrl },
-      caption: caption || ''
+    campaignStats = {
+      total: campaignQueue.length,
+      sent: 0,
+      failed: 0,
+      status: 'queued',
+      currentBatch: 0
+    };
+
+    // Start Anti-Ban Queue Processing in Background
+    processAntiBanCampaignQueue();
+
+    res.json({
+      success: true,
+      message: `Anti-Ban Protected Campaign "${title}" Queued for ${eligiblePatients.length} Patients!`,
+      stats: campaignStats
     });
-
-    res.json({ status: 'SUCCESS', sent });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to send WhatsApp media message', details: err.message });
+    res.status(500).json({ error: 'Failed to queue campaign', details: err.message });
   }
+});
+
+app.get('/api/campaigns/status', (req, res) => {
+  res.json({ stats: campaignStats, remaining: campaignQueue.length });
 });
 
 app.post('/message/sendText', async (req, res) => {
@@ -270,7 +297,7 @@ app.post('/message/sendText', async (req, res) => {
     const { number, text } = req.body;
     if (!waSocket || waConnectionState.status !== 'connected') return res.status(400).json({ error: 'WhatsApp is not connected.' });
     const formattedNumber = number.replace(/\D/g, '') + '@s.whatsapp.net';
-    const sent = await waSocket.sendMessage(formattedNumber, { text });
+    const sent = await waSocket.sendMessage(formattedNumber, { text: processSpintax(text) });
     res.json({ status: 'SUCCESS', sent });
   } catch (err) {
     res.status(500).json({ error: 'Failed to send message', details: err.message });
@@ -278,9 +305,7 @@ app.post('/message/sendText', async (req, res) => {
 });
 
 app.post('/api/chat', async (req, res) => res.json({ reply: await callGroqAI(req.body.prompt, req.body.systemPrompt) }));
-
 app.get('/instance/connect', (req, res) => res.json({ instance: 'Hospital-Demo', status: waConnectionState.status, qrCode: waConnectionState.qrCodeDataUrl, user: waConnectionState.user }));
-
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-app.listen(PORT, () => console.log(`🚀 Hospital Platform running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Anti-Ban Engine & Hospital Server running on port ${PORT}`));
