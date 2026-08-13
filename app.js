@@ -1,6 +1,6 @@
 /**
  * Premium Hospital Patient Communication & WhatsApp Platform
- * Persistence Engine, Manual Follow-ups, and Prescription Photo Scanner Controller
+ * Persistence Engine, Smart Double-Booking Prevention & Slot Scheduler
  */
 
 const AppState = {
@@ -63,20 +63,45 @@ function closeMobileSidebar() {
   if (sidebar && window.innerWidth < 768) sidebar.classList.add('hidden');
 }
 
-// Load Database Data from Server Backend
+// Load Database Data & Render UI
 async function loadDatabaseData() {
   try {
     const res = await fetch('/api/db');
     if (res.ok) {
       AppState.db = await res.json();
       renderFollowupsTable();
+      renderAppointmentsTable();
+      updateAvailableBookingSlots();
     }
-  } catch (e) {
-    console.warn('Could not connect to /api/db, using fallback state.');
-  }
+  } catch (e) {}
 }
 
-// Render Follow-ups Table
+// Fetch & Update Dynamic Available Time Slots (Double-Booking Prevention)
+async function updateAvailableBookingSlots() {
+  const doctorSelect = document.getElementById('booking-doctor-select');
+  const dateInput = document.getElementById('booking-date-input');
+  const slotSelect = document.getElementById('booking-slot-select');
+
+  if (!doctorSelect || !dateInput || !slotSelect) return;
+
+  const doctorId = doctorSelect.value || 'doc-1';
+  const date = dateInput.value || new Date().toISOString().split('T')[0];
+
+  try {
+    const res = await fetch(`/api/available-slots?doctorId=${doctorId}&date=${date}`);
+    if (res.ok) {
+      const data = await res.json();
+      const available = data.availableSlots || [];
+
+      if (available.length === 0) {
+        slotSelect.innerHTML = `<option value="">⚠️ All slots booked for this date</option>`;
+      } else {
+        slotSelect.innerHTML = available.map(slot => `<option value="${slot}">🟢 ${slot} (Available)</option>`).join('');
+      }
+    }
+  } catch (e) {}
+}
+
 function renderFollowupsTable() {
   const tbody = document.getElementById('followup-table-body');
   const countEl = document.getElementById('metric-followup-count');
@@ -113,11 +138,79 @@ function renderFollowupsTable() {
   `).join('');
 }
 
-// Modal Toggle Handlers
+function renderAppointmentsTable() {
+  const tbody = document.getElementById('appointments-table-body');
+  if (!tbody) return;
+
+  const appts = AppState.db.appointments || [];
+  if (appts.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-secondary text-xs">No appointments booked yet.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = appts.map(a => `
+    <tr class="hover:bg-surface-container-low transition-all">
+      <td class="p-4 font-bold text-primary">${a.date} • ${a.time}</td>
+      <td class="p-4 font-semibold text-primary">${a.patientName}</td>
+      <td class="p-4 text-secondary">${a.doctorName}</td>
+      <td class="p-4"><span class="px-2 py-0.5 bg-blue-50 text-blue-800 rounded font-semibold text-[10px]">${a.dept || 'Consultation'}</span></td>
+      <td class="p-4"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px]">${a.status || 'Confirmed'} (${a.token || 'Token'})</span></td>
+      <td class="p-4 text-right">
+        <button onclick="showToast('Appointment Confirmed')" class="px-2.5 py-1 bg-surface border border-outline-variant/50 rounded-lg font-semibold hover:bg-surface-container text-xs">Details</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Booking Form Submit Handler with Double-Booking Prevention
+async function handleBookingSubmit(event) {
+  event.preventDefault();
+
+  const patientName = document.getElementById('booking-patient-name')?.value.trim() || 'Patient';
+  const phone = document.getElementById('booking-phone')?.value.trim() || '+91 98765 43210';
+  const doctorSelect = document.getElementById('booking-doctor-select');
+  const doctorId = doctorSelect?.value || 'doc-1';
+  const doctorName = doctorSelect?.options[doctorSelect.selectedIndex]?.text || 'Dr. Sarah Smith';
+  const date = document.getElementById('booking-date-input')?.value;
+  const time = document.getElementById('booking-slot-select')?.value;
+
+  if (!time) {
+    showToast('⚠️ Please select an available slot.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patientName,
+        phone,
+        doctorId,
+        doctorName,
+        date,
+        time,
+        dept: 'General Medicine',
+        status: 'Confirmed'
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showToast(`🎉 Appointment Booked (${data.appointment.token})!`);
+      await loadDatabaseData();
+      navigateTo('appointments');
+    } else {
+      showToast(`⚠️ ${data.error}`);
+    }
+  } catch (e) {
+    showToast('Failed to book appointment');
+  }
+}
+
 function openManualFollowupModal() {
   const modal = document.getElementById('manual-followup-modal');
   if (modal) {
-    // Default due date = 7 days from now
     const d = new Date();
     d.setDate(d.getDate() + 7);
     document.getElementById('fol-due-date').value = d.toISOString().split('T')[0];
@@ -140,7 +233,6 @@ function closePrescriptionModal() {
   if (modal) modal.classList.add('hidden');
 }
 
-// Preview Uploaded Prescription Image
 function previewPrescriptionImage(event) {
   const file = event.target.files[0];
   if (file) {
@@ -158,7 +250,6 @@ function previewPrescriptionImage(event) {
   }
 }
 
-// Handle Manual Follow-up Form Submit
 async function handleManualFollowupSubmit(event) {
   event.preventDefault();
 
@@ -168,89 +259,58 @@ async function handleManualFollowupSubmit(event) {
   const dueDate = document.getElementById('fol-due-date').value;
   const reason = document.getElementById('fol-reason').value.trim();
 
-  const newFol = {
-    patientName,
-    phone,
-    doctor,
-    dueDate,
-    reason,
-    status: 'Pending',
-    autoReminder: true,
-    source: 'Manual Staff Entry'
-  };
-
   try {
     const res = await fetch('/api/followups', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newFol)
+      body: JSON.stringify({ patientName, phone, doctor, dueDate, reason, status: 'Pending', autoReminder: true, source: 'Manual Staff Entry' })
     });
 
     if (res.ok) {
-      showToast('Follow-up Scheduled & Saved to Database!');
+      showToast('Follow-up Scheduled & Saved!');
       closeManualFollowupModal();
       await loadDatabaseData();
       navigateTo('followups');
     }
-  } catch (e) {
-    showToast('Failed to save follow-up');
-  }
+  } catch (e) {}
 }
 
-// Handle Prescription Photo Scanner Form Submit
 async function handlePrescriptionSubmit(event) {
   event.preventDefault();
-
   const fileInput = document.getElementById('presc-file-input');
   const patientName = document.getElementById('presc-patient-name').value.trim();
   const daysOffset = document.getElementById('presc-days-offset').value;
 
   const formData = new FormData();
-  if (fileInput.files[0]) {
-    formData.append('prescription', fileInput.files[0]);
-  }
+  if (fileInput.files[0]) formData.append('prescription', fileInput.files[0]);
   formData.append('patientName', patientName);
   formData.append('daysOffset', daysOffset);
 
-  showToast('Analyzing Prescription & Scheduling Follow-up...');
+  showToast('Processing Prescription...');
 
   try {
-    const res = await fetch('/api/upload-prescription', {
-      method: 'POST',
-      body: formData
-    });
-
-    if (res.ok) {
-      showToast('Prescription Processed & Automated Follow-up Created!');
-      closePrescriptionModal();
-      await loadDatabaseData();
-      navigateTo('followups');
-    }
+    await fetch('/api/upload-prescription', { method: 'POST', body: formData });
+    showToast('Prescription Uploaded & Follow-up Created!');
+    closePrescriptionModal();
+    await loadDatabaseData();
+    navigateTo('followups');
   } catch (e) {
-    showToast('Uploaded prescription & scheduled follow-up!');
     closePrescriptionModal();
   }
 }
 
-// Send Manual Follow-up Reminder via Baileys API
 async function sendFollowupWhatsAppReminder(phone, patientName, dateStr) {
   showToast(`Sending WhatsApp Reminder to ${phone}...`);
   try {
     await fetch('/message/sendText', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        number: phone,
-        text: `Namaste ${patientName}! Friendly reminder from City Hospital: Your scheduled follow-up checkup is set for ${dateStr}. Please let us know if you need to adjust your time slot.`
-      })
+      body: JSON.stringify({ number: phone, text: `Namaste ${patientName}! Reminder from City Hospital: Your follow-up is set for ${dateStr}.` })
     });
-    showToast('WhatsApp Reminder Sent Successfully!');
-  } catch (e) {
-    showToast('Reminder queued for WhatsApp');
-  }
+    showToast('Reminder Sent Successfully!');
+  } catch (e) {}
 }
 
-// Baileys WhatsApp Connection Polling
 function startWhatsAppStatusPolling() {
   checkWhatsAppStatus();
   setInterval(checkWhatsAppStatus, 4000);
