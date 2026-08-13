@@ -1,40 +1,20 @@
 /**
- * Premium Hospital Patient Communication, Appointment & WhatsApp Automation Engine
- * State Management & UI Interactivity Controller with Groq AI Integration
+ * Premium Hospital Patient Communication & WhatsApp Platform
+ * Baileys Engine & Evolution API Compatible Interactivity Controller
  */
 
-// Global App State
 const AppState = {
   activeScreen: 'overview',
   activeBranch: 'Main Branch',
-  isWhatsAppConnected: true,
+  waStatus: 'disconnected',
+  waUser: null,
+  waQrDataUrl: null,
   demoMode: true,
   demoStep: 1,
-  selectedPatientId: '88392',
-  selectedDoctorId: 'doc-1',
-  activeInboxFilter: 'all',
-  activeLang: 'en',
-  notificationsOpen: false,
-  aiAssistantOpen: false,
-  duplicateModalOpen: false,
-  addDoctorModalOpen: false,
-  onboardingStep: 1,
-  campaignStep: 1,
   
-  // Synthetic Data Store
   patients: [
-    { id: '88392', name: 'Robert Chen', phone: '+1 (555) 283-9942', dob: '05/12/1975', doctor: 'Dr. Sarah Smith', lastContact: '10:42 AM Today', tags: ['Hypertension', 'Pending Labs'], consent: 'Opted In', unread: false, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80' },
-    { id: '88393', name: 'Elena Jackson', phone: '+1 (555) 912-3341', dob: '11/24/1988', doctor: 'Dr. Arjun Mehta', lastContact: '09:15 AM Today', tags: ['Cardiology', 'New Patient'], consent: 'Opted In', unread: true, avatar: '' },
-    { id: '88394', name: 'Martha Hughes', phone: '+1 (555) 441-0092', dob: '02/15/1952', doctor: 'Dr. Priya Patel', lastContact: 'Yesterday', tags: ['Diabetes Type 2'], consent: 'Opted In', unread: false, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80' },
-    { id: '88395', name: 'Rahul Sharma', phone: '+91 98765 43210', dob: '08/19/1984', doctor: 'Dr. Arjun Mehta', lastContact: '10:30 AM Today', tags: ['Cardiology', 'Telehealth'], consent: 'Opted In', unread: true, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80' },
-    { id: '88396', name: 'Ananya Roy', phone: '+91 98112 00491', dob: '03/04/1991', doctor: 'Dr. Rajesh Kumar', lastContact: '2 days ago', tags: ['Orthopedics'], consent: 'Opted Out', unread: false, avatar: '' }
-  ],
-
-  doctors: [
-    { id: 'doc-1', name: 'Dr. Sarah Smith', spec: 'General Physician', dept: 'Internal Medicine', exp: '14 Yrs', apptsToday: 12, status: 'Available Today', fee: '$80', photo: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=300&q=80' },
-    { id: 'doc-2', name: 'Dr. Arjun Mehta', spec: 'Senior Cardiologist', dept: 'Cardiology', exp: '18 Yrs', apptsToday: 16, status: 'Available Today', fee: '$120', photo: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=300&q=80' },
-    { id: 'doc-3', name: 'Dr. Priya Patel', spec: 'Endocrinologist', dept: 'Diabetology', exp: '10 Yrs', apptsToday: 9, status: 'On Leave', fee: '$95', photo: 'https://images.unsplash.com/photo-1594824813566-78a9c29415bc?auto=format&fit=crop&w=300&q=80' },
-    { id: 'doc-4', name: 'Dr. Rajesh Kumar', spec: 'Orthopedic Surgeon', dept: 'Orthopedics', exp: '15 Yrs', apptsToday: 14, status: 'Available Today', fee: '$110', photo: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=300&q=80' }
+    { id: '88392', name: 'Robert Chen', phone: '+1 (555) 283-9942', dob: '05/12/1975', doctor: 'Dr. Sarah Smith', lastContact: '10:42 AM Today', tags: ['Hypertension', 'Pending Labs'], consent: 'Opted In', unread: false },
+    { id: '88395', name: 'Rahul Sharma', phone: '+91 98765 43210', dob: '08/19/1984', doctor: 'Dr. Arjun Mehta', lastContact: '10:30 AM Today', tags: ['Cardiology', 'Telehealth'], consent: 'Opted In', unread: true }
   ],
 
   demoScenario: [
@@ -49,29 +29,23 @@ const AppState = {
   ]
 };
 
-// DOM Content Loaded Handler
 document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
-  initSearchKeyboardShortcut();
   initDemoStepper();
   renderActiveView();
+  startWhatsAppStatusPolling();
 });
 
-// View Router
 function navigateTo(screenId) {
   AppState.activeScreen = screenId;
-  
-  // Update sidebar active classes
   document.querySelectorAll('.nav-link').forEach(link => {
-    const target = link.getAttribute('data-screen');
-    if (target === screenId) {
+    if (link.getAttribute('data-screen') === screenId) {
       link.classList.add('active-nav-item');
     } else {
       link.classList.remove('active-nav-item');
     }
   });
 
-  // Hide all screens, show target screen
   document.querySelectorAll('.screen-container').forEach(el => el.classList.add('hidden'));
   const targetEl = document.getElementById(`screen-${screenId}`);
   if (targetEl) {
@@ -106,67 +80,89 @@ function closeMobileSidebar() {
   }
 }
 
-function initSearchKeyboardShortcut() {
-  window.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
-      toggleGlobalSearchModal();
+// WhatsApp Baileys / Evolution API Status Polling
+function startWhatsAppStatusPolling() {
+  checkWhatsAppStatus();
+  setInterval(checkWhatsAppStatus, 4000);
+}
+
+async function checkWhatsAppStatus() {
+  try {
+    const res = await fetch('/instance/connect');
+    if (res.ok) {
+      const data = await res.json();
+      AppState.waStatus = data.status;
+      AppState.waQrDataUrl = data.qrCode;
+      AppState.waUser = data.user;
+
+      updateWhatsAppUI();
     }
-  });
-}
-
-function toggleGlobalSearchModal() {
-  const modal = document.getElementById('global-search-modal');
-  if (modal) modal.classList.toggle('hidden');
-}
-
-function toggleNotificationsDrawer() {
-  const drawer = document.getElementById('notifications-drawer');
-  if (drawer) drawer.classList.toggle('hidden');
-}
-
-function toggleAIAssistantDrawer() {
-  const drawer = document.getElementById('ai-assistant-drawer');
-  if (drawer) drawer.classList.toggle('hidden');
-}
-
-function openDuplicateModal() {
-  const modal = document.getElementById('duplicate-modal');
-  if (modal) modal.classList.remove('hidden');
-}
-function closeDuplicateModal() {
-  const modal = document.getElementById('duplicate-modal');
-  if (modal) modal.classList.add('hidden');
-}
-
-function openAddDoctorModal() {
-  const modal = document.getElementById('add-doctor-modal');
-  if (modal) modal.classList.remove('hidden');
-}
-function closeAddDoctorModal() {
-  const modal = document.getElementById('add-doctor-modal');
-  if (modal) modal.classList.add('hidden');
-}
-
-function handleDoctorPhotoUpload(event) {
-  const file = event.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const preview = document.getElementById('doctor-photo-preview');
-      if (preview) {
-        preview.src = e.target.result;
-        preview.classList.remove('hidden');
-      }
-    };
-    reader.readAsDataURL(file);
+  } catch (e) {
+    // Local fallback
   }
 }
 
-function initDemoStepper() {
-  updateDemoBarUI();
+function updateWhatsAppUI() {
+  const textEl = document.getElementById('header-wa-status-text');
+  const pulseEl = document.getElementById('header-wa-pulse');
+  const modalStatusEl = document.getElementById('modal-wa-status-pill');
+  const qrImg = document.getElementById('wa-qr-img');
+  const spinner = document.getElementById('wa-qr-spinner');
+
+  if (AppState.waStatus === 'connected') {
+    if (textEl) textEl.textContent = `Connected (${AppState.waUser?.id?.split(':')[0] || 'WhatsApp'})`;
+    if (pulseEl) pulseEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse';
+    if (modalStatusEl) {
+      modalStatusEl.textContent = 'Connected ✅';
+      modalStatusEl.className = 'px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold';
+    }
+    if (qrImg) qrImg.classList.add('hidden');
+    if (spinner) {
+      spinner.classList.remove('hidden');
+      spinner.innerHTML = `<span class="material-symbols-outlined text-4xl text-emerald-600">check_circle</span><span class="font-bold text-emerald-800">WhatsApp Pair Success!</span>`;
+    }
+  } else if (AppState.waStatus === 'qr_ready' && AppState.waQrDataUrl) {
+    if (textEl) textEl.textContent = 'Scan QR Code';
+    if (pulseEl) pulseEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse';
+    if (modalStatusEl) {
+      modalStatusEl.textContent = 'Scan QR Code 📷';
+      modalStatusEl.className = 'px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold';
+    }
+    if (qrImg) {
+      qrImg.src = AppState.waQrDataUrl;
+      qrImg.classList.remove('hidden');
+    }
+    if (spinner) spinner.classList.add('hidden');
+  } else {
+    if (textEl) textEl.textContent = 'Baileys Disconnected';
+    if (pulseEl) pulseEl.className = 'w-2.5 h-2.5 rounded-full bg-red-500 inline-block';
+    if (modalStatusEl) {
+      modalStatusEl.textContent = 'Disconnected';
+      modalStatusEl.className = 'px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 font-bold';
+    }
+  }
 }
 
+function openWhatsAppQRModal() {
+  const modal = document.getElementById('whatsapp-qr-modal');
+  if (modal) modal.classList.remove('hidden');
+  checkWhatsAppStatus();
+}
+
+function closeWhatsAppQRModal() {
+  const modal = document.getElementById('whatsapp-qr-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function refreshWhatsAppQR() {
+  showToast('Refreshing Baileys WhatsApp Session...');
+  try {
+    await fetch('/instance/restart', { method: 'POST' });
+    setTimeout(checkWhatsAppStatus, 1500);
+  } catch (e) {}
+}
+
+function initDemoStepper() { updateDemoBarUI(); }
 function nextDemoStep() {
   if (AppState.demoStep < AppState.demoScenario.length) {
     AppState.demoStep++;
@@ -176,7 +172,6 @@ function nextDemoStep() {
     showToast(`Demo Step ${AppState.demoStep}: ${stepData.title}`);
   }
 }
-
 function prevDemoStep() {
   if (AppState.demoStep > 1) {
     AppState.demoStep--;
@@ -185,13 +180,11 @@ function prevDemoStep() {
     updateDemoBarUI();
   }
 }
-
 function updateDemoBarUI() {
   const stepObj = AppState.demoScenario[AppState.demoStep - 1];
   const counterEl = document.getElementById('demo-step-counter');
   const titleEl = document.getElementById('demo-step-title');
   const textEl = document.getElementById('demo-step-text');
-
   if (counterEl) counterEl.textContent = `Step ${AppState.demoStep} of 8`;
   if (titleEl) titleEl.textContent = stepObj.title;
   if (textEl) textEl.textContent = stepObj.text;
@@ -205,7 +198,7 @@ function showToast(msg) {
   setTimeout(() => toast.remove(), 3500);
 }
 
-// Send Chat Message with Groq AI API Backend Fallback
+// Send Chat Message via Baileys API Spec (/message/sendText) + Groq AI Bot Fallback
 async function sendChatMessage(event) {
   if (event) event.preventDefault();
   const input = document.getElementById('chat-input-textarea');
@@ -239,8 +232,18 @@ async function sendChatMessage(event) {
   canvas.insertAdjacentHTML('beforeend', msgHTML);
   canvas.scrollTop = canvas.scrollHeight;
 
-  // If not an internal note, trigger Groq AI Bot Response simulation via /api/chat
-  if (!isNote) {
+  // Send real WhatsApp message if Baileys is connected
+  if (!isNote && AppState.waStatus === 'connected') {
+    try {
+      await fetch('/message/sendText', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: '+15552839942', text: msgText })
+      });
+      showToast('Delivered to WhatsApp via Baileys');
+    } catch (e) {}
+  } else if (!isNote) {
+    // Groq AI Assistant Fallback
     const typingId = 'typing-' + Date.now();
     const typingHTML = `
       <div id="${typingId}" class="flex flex-col gap-1 items-start max-w-[80%] animate-fade-in">
@@ -296,45 +299,9 @@ function toggleNoteMode() {
     } else {
       btn.classList.add('bg-amber-100', 'text-amber-800');
       btn.classList.remove('text-secondary');
-      input.placeholder = 'Type an internal staff note (Will NOT be sent to patient)...';
+      input.placeholder = 'Type an internal staff note...';
     }
   }
 }
 
-function updateCampaignExclusions() {
-  const total = 1248;
-  const optedOut = 28;
-  const recentlyContacted = 14;
-  const eligible = total - (optedOut + recentlyContacted);
-
-  const elEligible = document.getElementById('campaign-eligible-count');
-  if (elEligible) elEligible.textContent = eligible.toLocaleString();
-}
-
-function switchTemplateLang(lang) {
-  AppState.activeLang = lang;
-  document.querySelectorAll('.lang-btn').forEach(btn => {
-    if (btn.getAttribute('data-lang') === lang) {
-      btn.classList.add('bg-primary', 'text-on-primary');
-      btn.classList.remove('bg-surface', 'text-secondary');
-    } else {
-      btn.classList.remove('bg-primary', 'text-on-primary');
-      btn.classList.add('bg-surface', 'text-secondary');
-    }
-  });
-
-  const previewEl = document.getElementById('template-preview-box');
-  if (previewEl) {
-    if (lang === 'en') {
-      previewEl.innerText = "Dear {{patient_name}}, your appointment with {{doctor_name}} is confirmed for {{appointment_date}} at {{appointment_time}}. Please arrive 15 minutes early.";
-    } else if (lang === 'hi') {
-      previewEl.innerText = "प्रिय {{patient_name}}, {{doctor_name}} के साथ आपका अपॉइंटमेंट {{appointment_date}} को {{appointment_time}} पर कन्फर्म है। कृपया 15 मिनट पहले पहुंचे।";
-    } else if (lang === 'hinglish') {
-      previewEl.innerText = "Namaste {{patient_name}}, aapka appointment {{doctor_name}} ke saath {{appointment_date}} ko {{appointment_time}} baje confirm ho gaya hai. Pls 15 mins pehle aayein.";
-    }
-  }
-}
-
-function renderActiveView() {
-  navigateTo(AppState.activeScreen);
-}
+function renderActiveView() { navigateTo(AppState.activeScreen); }
