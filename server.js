@@ -41,7 +41,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, './')));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Multi-Groq API Key Pool from Environment Variables & Fallbacks
+// Dynamic Multi-Groq API Key Pool
 function getGroqKeyPool() {
   const keys = [
     process.env.GROQ_API_KEY,
@@ -56,12 +56,9 @@ function getGroqKeyPool() {
 
 let currentKeyIndex = 0;
 
-// Multi-Key Failover AI Call Function
 async function callGroqAI(prompt, systemPrompt) {
   const keyPool = getGroqKeyPool();
-  if (keyPool.length === 0) {
-    return 'Hello! Your message has been received by City Hospital.';
-  }
+  if (keyPool.length === 0) return 'Hello! Your message has been received by City Hospital.';
 
   for (let attempt = 0; attempt < keyPool.length; attempt++) {
     const apiKey = keyPool[(currentKeyIndex + attempt) % keyPool.length];
@@ -89,40 +86,26 @@ async function callGroqAI(prompt, systemPrompt) {
         const data = await response.json();
         return data.choices[0]?.message?.content || 'Message received.';
       }
-    } catch (e) {
-      console.warn(`[Groq Multi-API] Key attempt failure:`, e.message);
-    }
+    } catch (e) {}
   }
-
   return 'Thank you for messaging City Hospital. Our team is at your service.';
 }
 
-// Extract Patient Details (Name, Age, Gender) from Any Free-form Input Using Groq AI
 async function extractPatientDetailsFromText(userText) {
-  const systemPrompt = `You are a medical data extraction bot. Parse the user input and extract Name, Age, and Gender.
-Return STRICT JSON format ONLY: {"name": "Extracted Name or Unknown", "age": "Extracted Age or Unknown", "gender": "Male/Female/Other or Unknown"}`;
-  
+  const systemPrompt = `You are a medical data extraction bot. Return STRICT JSON ONLY: {"name": "Name or Unknown", "age": "Age or Unknown", "gender": "Male/Female or Unknown"}`;
   try {
     const rawReply = await callGroqAI(userText, systemPrompt);
     const jsonMatch = rawReply.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
+    if (jsonMatch) return JSON.parse(jsonMatch[0]);
   } catch (e) {}
-
   return { name: userText, age: 'Unknown', gender: 'Unknown' };
 }
 
-// In-Memory Patient Conversation State Tracker for WhatsApp
 const patientSessions = {};
 
 // Baileys WhatsApp Engine
 let waSocket = null;
-let waConnectionState = {
-  status: 'disconnected',
-  qrCodeDataUrl: null,
-  user: null
-};
+let waConnectionState = { status: 'disconnected', qrCodeDataUrl: null, user: null };
 
 async function connectToWhatsApp() {
   try {
@@ -146,7 +129,6 @@ async function connectToWhatsApp() {
 
     waSocket.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
-
       if (qr) {
         waConnectionState.status = 'qr_ready';
         waConnectionState.qrCodeDataUrl = await QRCode.toDataURL(qr);
@@ -165,7 +147,6 @@ async function connectToWhatsApp() {
       }
     });
 
-    // Handle Conversational WhatsApp Onboarding & Prescription Workflow
     waSocket.ev.on('messages.upsert', async (m) => {
       if (m.type === 'notify') {
         for (const msg of m.messages) {
@@ -178,100 +159,48 @@ async function connectToWhatsApp() {
             if (!patientSessions[phone]) {
               patientSessions[phone] = { step: 'ASK_LANG', language: 'English', name: '', age: '', gender: '', phone };
             }
-
             const session = patientSessions[phone];
 
-            // STEP 1: Language Selection
             if (session.step === 'ASK_LANG') {
               session.step = 'ASK_DETAILS';
               session.language = textMsg || 'English';
-              await waSocket.sendMessage(senderJid, {
-                text: `🏥 Welcome to City Hospital!\n\nPreferred Language set to: ${session.language}\n\nStep 1/3: Please reply with your Name, Age, and Gender (e.g. "Rahul Sharma, 28, Male" or any format).`
-              });
-            }
-            // STEP 2: Name, Age, Gender Extraction
-            else if (session.step === 'ASK_DETAILS') {
+              await waSocket.sendMessage(senderJid, { text: `🏥 Welcome to City Hospital!\nLanguage: ${session.language}\n\nStep 1/3: Please reply with your Name, Age, and Gender (e.g. "Rahul Sharma, 28, Male").` });
+            } else if (session.step === 'ASK_DETAILS') {
               const details = await extractPatientDetailsFromText(textMsg);
               session.name = details.name !== 'Unknown' ? details.name : textMsg;
               session.age = details.age;
               session.gender = details.gender;
               session.step = 'ASK_PRESCRIPTION';
 
-              // Save patient in persistent database
-              db.addPatient({
-                name: session.name,
-                phone: session.phone,
-                age: session.age,
-                gender: session.gender,
-                language: session.language,
-                dob: session.age !== 'Unknown' ? (2026 - parseInt(session.age)) + '-01-01' : '1990-01-01',
-                doctor: 'Dr. Sarah Smith',
-                consent: 'Opted In',
-                tags: ['WhatsApp Onboarded']
-              });
+              db.addPatient({ name: session.name, phone: session.phone, age: session.age, gender: session.gender, language: session.language, doctor: 'Dr. Sarah Smith', consent: 'Opted In' });
 
-              await waSocket.sendMessage(senderJid, {
-                text: `✅ Patient Registered:\n• Name: ${session.name}\n• Age: ${session.age}\n• Gender: ${session.gender}\n\nStep 2/3: Please upload/send your Prescription Photo or describe your symptoms/medical history.`
-              });
-            }
-            // STEP 3: Prescription Upload & Auto-Followup
-            else if (session.step === 'ASK_PRESCRIPTION') {
+              await waSocket.sendMessage(senderJid, { text: `✅ Patient Registered: ${session.name} (${session.age} Yrs, ${session.gender})\n\nStep 2/3: Please upload your Prescription Photo or medical complaint.` });
+            } else if (session.step === 'ASK_PRESCRIPTION') {
               session.step = 'BOOK_SLOT';
-              
               const dueDate = new Date();
               dueDate.setDate(dueDate.getDate() + 7);
               const dateStr = dueDate.toISOString().split('T')[0];
 
-              db.addFollowup({
-                patientName: session.name,
-                phone: session.phone,
-                doctor: 'Dr. Sarah Smith',
-                reason: 'Prescription Follow-up (Auto Extracted)',
-                dueDate: dateStr,
-                status: 'Pending',
-                autoReminder: true,
-                source: 'WhatsApp Prescription Bot'
-              });
+              db.addFollowup({ patientName: session.name, phone: session.phone, doctor: 'Dr. Sarah Smith', reason: 'Prescription Follow-up', dueDate: dateStr, status: 'Pending', autoReminder: true, source: 'WhatsApp Prescription Bot' });
 
-              // Fetch unbooked slots for Dr. Sarah Smith tomorrow
               const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
               const availableSlots = db.getAvailableSlots('doc-1', tomorrowStr);
 
-              await waSocket.sendMessage(senderJid, {
-                text: `✅ Prescription Received!\n📅 Automated Follow-up scheduled for ${dateStr}.\n\nStep 3/3: Select Available Appointment Slot for tomorrow (${tomorrowStr}) with Dr. Sarah Smith:\n\n` +
-                      availableSlots.map((s, idx) => `${idx + 1}. ${s}`).join('\n') + `\n\nReply with slot number (e.g. 1).`
-              });
-            }
-            // STEP 4: Appointment Slot Selection
-            else if (session.step === 'BOOK_SLOT') {
+              await waSocket.sendMessage(senderJid, { text: `✅ Prescription Received!\n\nStep 3/3: Select Available Slot for ${tomorrowStr} with Dr. Sarah Smith:\n\n` + availableSlots.map((s, idx) => `${idx + 1}. ${s}`).join('\n') });
+            } else if (session.step === 'BOOK_SLOT') {
               const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
               const availableSlots = db.getAvailableSlots('doc-1', tomorrowStr);
               const slotIdx = parseInt(textMsg) - 1;
               const chosenSlot = (slotIdx >= 0 && slotIdx < availableSlots.length) ? availableSlots[slotIdx] : availableSlots[0];
 
               try {
-                const appt = db.addAppointment({
-                  patientName: session.name,
-                  phone: session.phone,
-                  doctorId: 'doc-1',
-                  doctorName: 'Dr. Sarah Smith',
-                  date: tomorrowStr,
-                  time: chosenSlot,
-                  dept: 'Internal Medicine',
-                  status: 'Confirmed'
-                });
-
+                const appt = db.addAppointment({ patientName: session.name, phone: session.phone, doctorId: 'doc-1', doctorName: 'Dr. Sarah Smith', date: tomorrowStr, time: chosenSlot, status: 'Confirmed' });
                 session.step = 'COMPLETED';
-
-                await waSocket.sendMessage(senderJid, {
-                  text: `🎉 Appointment Confirmed!\n\n📋 Token: ${appt.token}\n👨‍⚕️ Doctor: Dr. Sarah Smith\n📅 Date: ${tomorrowStr}\n⏰ Time Slot: ${chosenSlot}\n📍 Location: Cabin 2, Main Branch\n\nPlease arrive 15 minutes prior.`
-                });
+                await waSocket.sendMessage(senderJid, { text: `🎉 Appointment Confirmed!\n📋 ${appt.token}\n👨‍⚕️ Dr. Sarah Smith\n📅 ${tomorrowStr} at ${chosenSlot}` });
               } catch (e) {
-                await waSocket.sendMessage(senderJid, { text: `⚠️ ${e.message} Please choose another slot.` });
+                await waSocket.sendMessage(senderJid, { text: `⚠️ ${e.message}` });
               }
-            }
-            // GENERAL CHAT
-            else {
+            } else {
               const reply = await callGroqAI(textMsg, `You are a helpful receptionist for City Hospital responding in ${session.language}.`);
               await waSocket.sendMessage(senderJid, { text: reply });
             }
@@ -289,94 +218,57 @@ connectToWhatsApp();
 
 // ==================== REST API ENDPOINTS ====================
 
-app.get('/api/db', (req, res) => {
-  res.json(db.readDB());
-});
+app.get('/api/db', (req, res) => res.json(db.readDB()));
 
-// Endpoint to fetch unbooked available slots for any doctor and date
 app.get('/api/available-slots', (req, res) => {
   const { doctorId, date } = req.query;
-  if (!doctorId || !date) {
-    return res.status(400).json({ error: 'doctorId and date query parameters are required.' });
-  }
-  const openSlots = db.getAvailableSlots(doctorId, date);
-  res.json({ doctorId, date, availableSlots: openSlots });
+  res.json({ doctorId, date, availableSlots: db.getAvailableSlots(doctorId, date) });
 });
 
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image uploaded.' });
   const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-  res.json({ success: true, url: fileUrl });
+  res.json({ success: true, url: fileUrl, filename: req.file.filename, path: req.file.path });
 });
 
-app.post('/api/patients', (req, res) => {
-  const item = db.addPatient(req.body);
-  res.json({ success: true, patient: item });
-});
-
-app.post('/api/doctors', (req, res) => {
-  const item = db.addDoctor(req.body);
-  res.json({ success: true, doctor: item });
-});
-
-// Create Appointment with Double-Booking Validation
+app.post('/api/patients', (req, res) => res.json({ success: true, patient: db.addPatient(req.body) }));
+app.post('/api/doctors', (req, res) => res.json({ success: true, doctor: db.addDoctor(req.body) }));
 app.post('/api/appointments', (req, res) => {
-  try {
-    const item = db.addAppointment(req.body);
-    res.json({ success: true, appointment: item });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
+  try { res.json({ success: true, appointment: db.addAppointment(req.body) }); }
+  catch (e) { res.status(400).json({ error: e.message }); }
 });
+app.post('/api/followups', (req, res) => res.json({ success: true, followup: db.addFollowup(req.body) }));
 
-app.post('/api/followups', (req, res) => {
-  const item = db.addFollowup(req.body);
-  res.json({ success: true, followup: item });
-});
-
-app.post('/api/upload-prescription', upload.single('prescription'), (req, res) => {
+// 5. Bulk WhatsApp Media/Photo Campaign Endpoint (Evolution API Spec)
+app.post('/message/sendMedia', upload.single('image'), async (req, res) => {
   try {
-    const patientName = req.body.patientName || 'Walk-in Patient';
-    const phone = req.body.phone || '+91 98765 43210';
-    const doctor = req.body.doctor || 'Dr. Sarah Smith';
-    const daysOffset = parseInt(req.body.daysOffset) || 7;
+    const { number, caption } = req.body;
+    let imageUrl = req.body.imageUrl;
 
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + daysOffset);
-    const dateStr = dueDate.toISOString().split('T')[0];
+    if (req.file) {
+      imageUrl = req.file.path;
+    }
 
-    const followup = db.addFollowup({
-      patientName,
-      phone,
-      doctor,
-      reason: `Prescription Follow-up (${req.body.notes || 'Medication Review'})`,
-      dueDate: dateStr,
-      status: 'Pending',
-      autoReminder: true,
-      source: 'Prescription Photo Scanner'
+    if (!waSocket || waConnectionState.status !== 'connected') {
+      return res.status(400).json({ error: 'WhatsApp is not connected.' });
+    }
+
+    const formattedNumber = number.replace(/\D/g, '') + '@s.whatsapp.net';
+    const sent = await waSocket.sendMessage(formattedNumber, {
+      image: { url: imageUrl },
+      caption: caption || ''
     });
 
-    res.json({ success: true, followup });
+    res.json({ status: 'SUCCESS', sent });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to process prescription' });
+    res.status(500).json({ error: 'Failed to send WhatsApp media message', details: err.message });
   }
-});
-
-app.get('/instance/connect', (req, res) => {
-  res.json({
-    instance: 'Hospital-Demo',
-    status: waConnectionState.status,
-    qrCode: waConnectionState.qrCodeDataUrl,
-    user: waConnectionState.user
-  });
 });
 
 app.post('/message/sendText', async (req, res) => {
   try {
     const { number, text } = req.body;
-    if (!waSocket || waConnectionState.status !== 'connected') {
-      return res.status(400).json({ error: 'WhatsApp is not connected.' });
-    }
+    if (!waSocket || waConnectionState.status !== 'connected') return res.status(400).json({ error: 'WhatsApp is not connected.' });
     const formattedNumber = number.replace(/\D/g, '') + '@s.whatsapp.net';
     const sent = await waSocket.sendMessage(formattedNumber, { text });
     res.json({ status: 'SUCCESS', sent });
@@ -385,15 +277,10 @@ app.post('/message/sendText', async (req, res) => {
   }
 });
 
-app.post('/api/chat', async (req, res) => {
-  const reply = await callGroqAI(req.body.prompt, req.body.systemPrompt);
-  res.json({ reply });
-});
+app.post('/api/chat', async (req, res) => res.json({ reply: await callGroqAI(req.body.prompt, req.body.systemPrompt) }));
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.get('/instance/connect', (req, res) => res.json({ instance: 'Hospital-Demo', status: waConnectionState.status, qrCode: waConnectionState.qrCodeDataUrl, user: waConnectionState.user }));
 
-app.listen(PORT, () => {
-  console.log(`🚀 Hospital Conversational & Slot Scheduler Server running on port ${PORT}`);
-});
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+app.listen(PORT, () => console.log(`🚀 Hospital Platform running on port ${PORT}`));
