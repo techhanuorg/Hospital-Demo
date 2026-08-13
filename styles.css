@@ -1,0 +1,148 @@
+/* Custom Styles and Utility Overrides for Hospital Automation Platform */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --color-primary-navy: #031635;
+  --color-primary-container: #1a2b4b;
+  --color-soft-blue: #d3e2ed;
+  --color-teal-success: #00a85a;
+  --color-amber-warning: #d97706;
+  --color-red-danger: #dc2626;
+  --color-purple-ai: #7c3aed;
+  --color-bg-light: #f8f9fa;
+  --color-border-light: rgba(225, 227, 228, 0.8);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--color-bg-light);
+  color: #191c1d;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(117, 119, 127, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(117, 119, 127, 0.45);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animations */
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 0.4; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-ring 2.5s infinite ease-in-out;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-slide-in {
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+/* Custom UI Components */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(225, 227, 228, 0.6);
+}
+
+.active-nav-item {
+  background-color: #d3e2ed !important;
+  color: #031635 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 3px rgba(3, 22, 53, 0.08);
+}
+
+.internal-note-bubble {
+  background: #fefce8;
+  border: 1px solid #fef08a;
+  color: #713f12;
+}
+
+.timeline-connector::before {
+  content: '';
+  position: absolute;
+  top: 24px;
+  bottom: -24px;
+  left: 15px;
+  width: 2px;
+  background-color: #e2e8f0;
+}
+
+.timeline-item:last-child .timeline-connector::before {
+  display: none;
+}
+
+/* Tab Active Indicator */
+.tab-active {
+  color: #031635;
+  border-bottom: 2.5px solid #031635;
+  font-weight: 600;
+}
+
+/* Status Badges */
+.badge-confirmed {
+  background-color: #e6f7ef;
+  color: #007a40;
+  border: 1px solid #b7ebcf;
+}
+
+.badge-pending {
+  background-color: #fffbe0;
+  color: #92400e;
+  border: 1px solid #fef08a;
+}
+
+.badge-urgent {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.badge-automation {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+  border: 1px solid #e9d5ff;
+}
+
+/* Drawer Backdrop */
+.drawer-backdrop {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+}
