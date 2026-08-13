@@ -13,8 +13,7 @@ const {
   default: makeWASocket,
   useMultiFileAuthState,
   DisconnectReason,
-  fetchLatestBaileysVersion,
-  downloadMediaMessage
+  fetchLatestBaileysVersion
 } = require('@whiskeysockets/baileys');
 
 const app = express();
@@ -42,7 +41,65 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, './')));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Baileys WhatsApp Connection State
+// Dynamic Multi-Groq API Key Pool from Environment Variables
+function getGroqKeyPool() {
+  const keys = [
+    process.env.GROQ_API_KEY,
+    process.env.GROQ_API_KEY_2,
+    process.env.GROQ_API_KEY_3,
+    process.env.GROQ_API_KEY_4,
+    process.env.GROQ_API_KEY_5
+  ].filter(k => k && k.trim().length > 0);
+
+  return [...new Set(keys)];
+}
+
+let currentKeyIndex = 0;
+
+// Multi-Key Failover AI Call Function
+async function callGroqAI(prompt, systemPrompt) {
+  const keyPool = getGroqKeyPool();
+  if (keyPool.length === 0) {
+    return 'Hello! Your message has been received by City Hospital.';
+  }
+
+  for (let attempt = 0; attempt < keyPool.length; attempt++) {
+    const apiKey = keyPool[(currentKeyIndex + attempt) % keyPool.length];
+    try {
+      const messages = [];
+      if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+      messages.push({ role: 'user', content: prompt });
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 400
+        })
+      });
+
+      if (response.ok) {
+        currentKeyIndex = (currentKeyIndex + attempt + 1) % keyPool.length;
+        const data = await response.json();
+        return data.choices[0]?.message?.content || 'Message received.';
+      } else {
+        console.warn(`[Groq Multi-API] Key attempt #${attempt} failed status ${response.status}. Trying next key in pool...`);
+      }
+    } catch (e) {
+      console.warn(`[Groq Multi-API] Exception key attempt #${attempt}:`, e.message);
+    }
+  }
+
+  return 'Thank you for messaging City Hospital. Our team is at your service.';
+}
+
+// Baileys WhatsApp Engine
 let waSocket = null;
 let waConnectionState = {
   status: 'disconnected',
@@ -53,16 +110,20 @@ let waConnectionState = {
 
 async function connectToWhatsApp() {
   try {
-    const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, 'baileys_auth_info'));
+    const authPath = path.join(__dirname, 'baileys_auth_info');
+    if (!fs.existsSync(authPath)) {
+      fs.mkdirSync(authPath, { recursive: true });
+    }
+
+    const { state, saveCreds } = await useMultiFileAuthState(authPath);
     const { version } = await fetchLatestBaileysVersion();
 
     waConnectionState.status = 'connecting';
-    waConnectionState.lastError = null;
 
     waSocket = makeWASocket({
       version,
       logger: pino({ level: 'silent' }),
-      printQRInTerminal: true,
+      printQRInTerminal: false,
       auth: state,
       browser: ['Hospital Platform', 'Chrome', '1.0.0']
     });
@@ -75,25 +136,25 @@ async function connectToWhatsApp() {
       if (qr) {
         waConnectionState.status = 'qr_ready';
         waConnectionState.qrCodeDataUrl = await QRCode.toDataURL(qr);
-        console.log('⚡ Baileys WhatsApp QR Code updated');
+        console.log('⚡ Baileys WhatsApp QR Code generated');
       }
 
       if (connection === 'open') {
         waConnectionState.status = 'connected';
         waConnectionState.qrCodeDataUrl = null;
         waConnectionState.user = waSocket.user;
-        console.log('✅ WhatsApp Connected as:', waSocket.user?.id);
+        console.log('✅ WhatsApp Connected:', waSocket.user?.id);
       }
 
       if (connection === 'close') {
-        const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
         waConnectionState.status = 'disconnected';
         waConnectionState.qrCodeDataUrl = null;
         if (shouldReconnect) setTimeout(connectToWhatsApp, 5000);
       }
     });
 
-    // Handle Incoming WhatsApp Messages (Auto-Bot + Prescription Vision)
     waSocket.ev.on('messages.upsert', async (m) => {
       if (m.type === 'notify') {
         for (const msg of m.messages) {
@@ -103,18 +164,14 @@ async function connectToWhatsApp() {
             const textMsg = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
             const isImage = !!msg.message?.imageMessage;
 
-            console.log(`📩 Incoming WhatsApp from ${senderPhone}:`, textMsg || '[Image Prescription]');
-
-            // 1. If Patient sent Prescription Image
             if (isImage) {
-              await waSocket.sendMessage(senderJid, { text: '🩺 Thank you! We received your prescription image. Analyzing details to schedule your follow-up...' });
+              await waSocket.sendMessage(senderJid, { text: '🩺 Thank you! We received your prescription photo. Setting up your automated follow-up...' });
               
-              // Automatically schedule a follow-up in DB
-              const followupDate = new Date();
-              followupDate.setDate(followupDate.getDate() + 7); // Default 7 days follow up
-              const dateStr = followupDate.toISOString().split('T')[0];
+              const dueDate = new Date();
+              dueDate.setDate(dueDate.getDate() + 7);
+              const dateStr = dueDate.toISOString().split('T')[0];
 
-              const newFollowup = db.addFollowup({
+              db.addFollowup({
                 patientName: 'WhatsApp Patient (' + senderPhone + ')',
                 phone: senderPhone,
                 doctor: 'Dr. Sarah Smith',
@@ -126,12 +183,10 @@ async function connectToWhatsApp() {
               });
 
               await waSocket.sendMessage(senderJid, {
-                text: `✅ Prescription Received & Processed!\n\n📅 Automated Follow-up Scheduled:\nDate: ${dateStr}\nDoctor: Dr. Sarah Smith\n\nWe will send you a WhatsApp reminder 24 hours prior.`
+                text: `✅ Prescription Processed!\n\n📅 Automated Follow-up Scheduled:\nDate: ${dateStr}\nDoctor: Dr. Sarah Smith\n\nWe will send a WhatsApp reminder 24h prior.`
               });
-            }
-            // 2. If Patient sent Text Message -> Call Groq AI Assistant
-            else if (textMsg) {
-              const aiReply = await callGroqAI(textMsg, 'You are a calm, professional hospital receptionist for City Hospital. Answer patient inquiries concisely.');
+            } else if (textMsg) {
+              const aiReply = await callGroqAI(textMsg, 'You are a professional, calm receptionist for City Hospital. Provide helpful, concise responses.');
               await waSocket.sendMessage(senderJid, { text: aiReply });
             }
           }
@@ -140,109 +195,55 @@ async function connectToWhatsApp() {
     });
 
   } catch (err) {
-    console.error('Failed to initialize Baileys:', err);
+    console.error('Failed Baileys connection:', err.message);
     waConnectionState.status = 'disconnected';
   }
 }
 
 connectToWhatsApp();
 
-// Helper: Call Groq AI API
-async function callGroqAI(prompt, systemPrompt) {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return 'Hello! Your message has been received by City Hospital.';
+// ==================== REST API ENDPOINTS ====================
 
-  try {
-    const messages = [];
-    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
-    messages.push({ role: 'user', content: prompt });
-
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 400
-      })
-    });
-
-    if (!response.ok) return 'Thank you for messaging City Hospital. Our receptionist will assist you shortly.';
-    const data = await response.json();
-    return data.choices[0]?.message?.content || 'Message received.';
-  } catch (e) {
-    return 'Thank you for messaging City Hospital. Our team is at your service.';
-  }
-}
-
-// ==================== REST API & DATABASE ENDPOINTS ====================
-
-// 1. Get Entire Database State
 app.get('/api/db', (req, res) => {
   res.json(db.readDB());
 });
 
-// 2. Image Upload Endpoint (Free Local Disk Cloud Storage Served At /uploads/...)
 app.post('/api/upload', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No image file uploaded.' });
-  }
+  if (!req.file) return res.status(400).json({ error: 'No image uploaded.' });
   const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-  res.json({ success: true, url: fileUrl, filename: req.file.filename });
+  res.json({ success: true, url: fileUrl });
 });
 
-// 3. Patients API
 app.post('/api/patients', (req, res) => {
-  const newPatient = db.addPatient(req.body);
-  res.json({ success: true, patient: newPatient });
+  const item = db.addPatient(req.body);
+  res.json({ success: true, patient: item });
 });
 
-// 4. Doctors API
 app.post('/api/doctors', (req, res) => {
-  const newDoctor = db.addDoctor(req.body);
-  res.json({ success: true, doctor: newDoctor });
+  const item = db.addDoctor(req.body);
+  res.json({ success: true, doctor: item });
 });
 
-// 5. Appointments API
 app.post('/api/appointments', (req, res) => {
-  const newAppt = db.addAppointment(req.body);
-  res.json({ success: true, appointment: newAppt });
+  const item = db.addAppointment(req.body);
+  res.json({ success: true, appointment: item });
 });
 
-// 6. Follow-ups API (Manual + Bot Creation)
 app.post('/api/followups', (req, res) => {
-  const newFollowup = db.addFollowup(req.body);
-  res.json({ success: true, followup: newFollowup });
+  const item = db.addFollowup(req.body);
+  res.json({ success: true, followup: item });
 });
 
-// 7. Prescription Photo Scanner & Auto Follow-up Creator Endpoint
-app.post('/api/upload-prescription', upload.single('prescription'), async (req, res) => {
+app.post('/api/upload-prescription', upload.single('prescription'), (req, res) => {
   try {
     const patientName = req.body.patientName || 'Walk-in Patient';
     const phone = req.body.phone || '+91 98765 43210';
     const doctor = req.body.doctor || 'Dr. Sarah Smith';
     const daysOffset = parseInt(req.body.daysOffset) || 7;
 
-    let imageUrl = '';
-    if (req.file) {
-      imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    }
-
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + daysOffset);
     const dateStr = dueDate.toISOString().split('T')[0];
-
-    const presc = db.addPrescription({
-      patientName,
-      phone,
-      doctor,
-      imageUrl,
-      uploadedAt: new Date().toISOString()
-    });
 
     const followup = db.addFollowup({
       patientName,
@@ -255,13 +256,12 @@ app.post('/api/upload-prescription', upload.single('prescription'), async (req, 
       source: 'Prescription Photo Scanner'
     });
 
-    res.json({ success: true, prescription: presc, followup });
+    res.json({ success: true, followup });
   } catch (err) {
     res.status(500).json({ error: 'Failed to process prescription' });
   }
 });
 
-// 8. Baileys / Evolution API Status
 app.get('/instance/connect', (req, res) => {
   res.json({
     instance: 'Hospital-Demo',
@@ -271,7 +271,6 @@ app.get('/instance/connect', (req, res) => {
   });
 });
 
-// 9. Send WhatsApp Text (Evolution API Spec)
 app.post('/message/sendText', async (req, res) => {
   try {
     const { number, text } = req.body;
@@ -286,17 +285,15 @@ app.post('/message/sendText', async (req, res) => {
   }
 });
 
-// 10. Groq AI Proxy
 app.post('/api/chat', async (req, res) => {
   const reply = await callGroqAI(req.body.prompt, req.body.systemPrompt);
   res.json({ reply });
 });
 
-// Serve SPA index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Hospital Automation Platform with Persistence & Prescription Vision running on port ${PORT}`);
+  console.log(`🚀 Hospital Server with Multi-Groq API Pool running on port ${PORT}`);
 });
