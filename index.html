@@ -5,7 +5,6 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>City Hospital - Patient Communication & WhatsApp Automation Platform</title>
   
-  <!-- Tailwind CSS CDN + Google Fonts + Material Symbols -->
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -28,25 +27,11 @@
             "surface-container-lowest": "#ffffff",
             "surface-container-low": "#f3f4f5",
             "surface-container": "#edeeef",
-            "surface-container-high": "#e7e8e9",
             "tertiary-fixed-dim": "#61de8a",
             "tertiary-container": "#e6f7ef",
             "on-tertiary-container": "#005228",
             "error": "#dc2626",
-            "error-container": "#fef2f2",
-            "on-error-container": "#991b1b",
-            "outline": "#75777f",
-            "outline-variant": "#c5c6cf",
-            "background": "#f8f9fa",
-            "on-background": "#191c1d"
-          },
-          borderRadius: {
-            "DEFAULT": "0.375rem",
-            "lg": "0.5rem",
-            "xl": "0.75rem",
-            "2xl": "1rem",
-            "3xl": "1.5rem",
-            "full": "9999px"
+            "error-container": "#fef2f2"
           }
         }
       }
@@ -62,26 +47,19 @@
         <span class="material-symbols-outlined">menu</span>
       </button>
       
-      <!-- Hospital Branding & Branch Switcher -->
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-md">
           <span class="material-symbols-outlined filled text-2xl">local_hospital</span>
         </div>
         <div>
           <h1 class="font-bold text-lg text-primary tracking-tight leading-tight">City Hospital</h1>
-          <div class="flex items-center gap-2">
-            <select class="bg-transparent text-xs text-secondary font-medium border-none p-0 focus:ring-0 cursor-pointer">
-              <option>Main Branch (Central)</option>
-              <option>North Wing Specialty</option>
-              <option>Westside Diagnostic</option>
-            </select>
-          </div>
+          <p class="text-[10px] text-secondary font-medium">Main Branch (Central)</p>
         </div>
       </div>
 
       <div class="h-6 w-px bg-outline-variant/40 hidden sm:block mx-2"></div>
 
-      <!-- Baileys & Evolution API WhatsApp Status Indicator (Clickable to open QR Scanner) -->
+      <!-- Baileys & Evolution API WhatsApp Status Indicator -->
       <button onclick="openWhatsAppQRModal()" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-tertiary-container border border-tertiary-fixed-dim/40 text-on-tertiary-container text-xs font-semibold hover:bg-emerald-100 transition-all cursor-pointer">
         <span id="header-wa-pulse" class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse-slow"></span>
         <span id="header-wa-status-text">Baileys API Live</span>
@@ -90,11 +68,10 @@
 
     <!-- Right Header Actions -->
     <div class="flex items-center gap-3">
-      <!-- Global Search Command Bar Trigger -->
-      <button onclick="toggleGlobalSearchModal()" class="hidden sm:flex items-center gap-3 bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2 text-xs text-secondary hover:bg-surface-container transition-all w-64 shadow-inner">
-        <span class="material-symbols-outlined text-sm">search</span>
-        <span class="flex-1 text-left">Search patients, doctors, appts...</span>
-        <kbd class="bg-surface-container-highest px-1.5 py-0.5 rounded text-[10px] font-mono text-outline">⌘K</kbd>
+      <!-- Quick Prescription Scan Button -->
+      <button onclick="openPrescriptionModal()" class="p-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-all flex items-center gap-1.5 text-xs font-bold">
+        <span class="material-symbols-outlined text-lg">description</span>
+        <span class="hidden md:inline">Scan Prescription Photo</span>
       </button>
 
       <!-- AI Assistant Button -->
@@ -103,15 +80,8 @@
         <span class="hidden md:inline">Hospital AI</span>
       </button>
 
-      <!-- Notifications Bell -->
-      <button onclick="toggleNotificationsDrawer()" class="relative p-2 text-secondary hover:text-primary rounded-xl hover:bg-surface-container transition-all">
-        <span class="material-symbols-outlined">notifications</span>
-        <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-error rounded-full ring-2 ring-white"></span>
-      </button>
-
       <div class="h-6 w-px bg-outline-variant/40"></div>
 
-      <!-- Admin Profile Dropdown -->
       <div class="flex items-center gap-2 cursor-pointer p-1.5 rounded-xl hover:bg-surface-container transition-all">
         <div class="w-9 h-9 rounded-xl bg-primary-container text-on-primary-container font-bold flex items-center justify-center text-sm shadow-sm">
           A
@@ -158,6 +128,12 @@
           <span>Doctors</span>
         </a>
 
+        <a href="#" data-screen="followups" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
+          <span class="material-symbols-outlined text-lg">notification_important</span>
+          <span>Follow-ups</span>
+          <span id="sidebar-followup-badge" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">2</span>
+        </a>
+
         <a href="#" data-screen="campaigns" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
           <span class="material-symbols-outlined text-lg">campaign</span>
           <span>Campaigns</span>
@@ -167,92 +143,33 @@
           <span class="material-symbols-outlined text-lg">smart_toy</span>
           <span>Automations</span>
         </a>
-
-        <a href="#" data-screen="followups" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-lg">notification_important</span>
-          <span>Follow-ups</span>
-          <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">5</span>
-        </a>
-
-        <a href="#" data-screen="templates" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-lg">description</span>
-          <span>Templates</span>
-        </a>
-
-        <a href="#" data-screen="analytics" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-lg">analytics</span>
-          <span>Analytics</span>
-        </a>
-      </div>
-
-      <div class="my-2 border-t border-outline-variant/30 mx-4"></div>
-
-      <!-- Secondary Workflows -->
-      <div class="p-4 space-y-1">
-        <div class="text-[11px] font-bold text-outline uppercase tracking-wider px-3 mb-2">Hospital Operations</div>
-
-        <a href="#" data-screen="queue" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-lg">format_list_numbered</span>
-          <span>Live Queue Token</span>
-        </a>
-
-        <a href="#" data-screen="healthcamps" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-lg">volunteer_activism</span>
-          <span>Health Camps</span>
-        </a>
-
-        <a href="#" data-screen="feedback" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-lg">rate_review</span>
-          <span>Patient Feedback</span>
-        </a>
-      </div>
-
-      <!-- Footer Nav Links -->
-      <div class="mt-auto p-4 border-t border-outline-variant/30 space-y-1 bg-surface-container-low/50">
-        <a href="#" data-screen="onboarding" class="nav-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-primary font-semibold hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-base">checklist</span>
-          <span>Onboarding Setup</span>
-          <span class="ml-auto text-[10px] text-emerald-600 font-bold">80%</span>
-        </a>
-        <a href="#" data-screen="roles" class="nav-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-base">admin_panel_settings</span>
-          <span>Roles & Access</span>
-        </a>
-        <a href="#" data-screen="auditlog" class="nav-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-base">history</span>
-          <span>Audit Log</span>
-        </a>
-        <a href="#" data-screen="settings" class="nav-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-base">settings</span>
-          <span>Settings</span>
-        </a>
       </div>
     </aside>
 
     <!-- RIGHT MAIN CONTENT DISPLAY AREA -->
     <main class="flex-1 overflow-y-auto bg-background flex flex-col relative">
 
-      <!-- ==================== 1. OVERVIEW DASHBOARD & COMMAND CENTER ==================== -->
+      <!-- ==================== 1. OVERVIEW DASHBOARD ==================== -->
       <div id="screen-overview" class="screen-container p-6 space-y-6 max-w-7xl mx-auto w-full">
         <!-- Morning Greeting Banner -->
         <div class="bg-gradient-to-r from-primary-container via-primary to-slate-900 rounded-3xl p-6 text-on-primary shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div class="space-y-1 relative z-10">
             <div class="flex items-center gap-2 text-xs font-semibold text-tertiary-fixed-dim">
               <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>Baileys & Evolution API Active</span>
+              <span>Baileys & Prescription Vision Connected</span>
             </div>
             <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">Good morning, Anjali</h2>
-            <p class="text-on-primary-container text-sm">Here is what needs your attention today across the hospital communication hub.</p>
+            <p class="text-on-primary-container text-sm">Every patient detail and follow-up is automatically saved in persistent database storage.</p>
           </div>
 
           <div class="flex items-center gap-3 relative z-10">
-            <button onclick="openWhatsAppQRModal()" class="px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-md hover:bg-emerald-400 transition-all flex items-center gap-2">
-              <span class="material-symbols-outlined text-sm">qr_code_scanner</span>
-              <span>Scan WhatsApp QR</span>
+            <button onclick="openPrescriptionModal()" class="px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-md hover:bg-emerald-400 transition-all flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">photo_camera</span>
+              <span>Upload Prescription Photo</span>
             </button>
-            <button onclick="navigateTo('booking')" class="px-4 py-2.5 rounded-xl bg-white text-primary font-bold text-xs shadow-md hover:bg-slate-100 transition-all flex items-center gap-2">
-              <span class="material-symbols-outlined text-sm">add_circle</span>
-              <span>New Appointment</span>
+            <button onclick="openManualFollowupModal()" class="px-4 py-2.5 rounded-xl bg-white text-primary font-bold text-xs shadow-md hover:bg-slate-100 transition-all flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">add_alarm</span>
+              <span>Schedule Follow-up</span>
             </button>
           </div>
         </div>
@@ -261,287 +178,179 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-2">
             <div class="flex justify-between items-center text-secondary">
-              <span class="text-xs font-medium">Today's Appointments</span>
-              <span class="material-symbols-outlined text-primary text-xl">event</span>
-            </div>
-            <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-extrabold text-primary">74</span>
-              <span class="text-xs text-emerald-600 font-semibold">+12% vs yesterday</span>
-            </div>
-            <p class="text-[11px] text-secondary">61 Confirmed • 7 Pending</p>
-          </div>
-
-          <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-2">
-            <div class="flex justify-between items-center text-secondary">
-              <span class="text-xs font-medium">New Enquiries</span>
-              <span class="material-symbols-outlined text-blue-600 text-xl">chat</span>
-            </div>
-            <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-extrabold text-primary">18</span>
-              <span class="text-xs text-amber-600 font-semibold">11 Unread</span>
-            </div>
-            <p class="text-[11px] text-secondary">Avg Response: 4.2 mins</p>
-          </div>
-
-          <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-2">
-            <div class="flex justify-between items-center text-secondary">
-              <span class="text-xs font-medium">Follow-ups Due</span>
+              <span class="text-xs font-medium">Follow-ups Scheduled</span>
               <span class="material-symbols-outlined text-amber-600 text-xl">schedule</span>
             </div>
             <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-extrabold text-primary">23</span>
-              <span class="text-xs text-error font-semibold">5 Overdue</span>
+              <span id="metric-followup-count" class="text-3xl font-extrabold text-primary">2</span>
+              <span class="text-xs text-emerald-600 font-semibold">Auto Reminders Active</span>
             </div>
-            <p class="text-[11px] text-secondary">Post-op & Lab inquiries</p>
-          </div>
-
-          <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-2">
-            <div class="flex justify-between items-center text-secondary">
-              <span class="text-xs font-medium">Baileys API Status</span>
-              <span class="material-symbols-outlined text-emerald-600 text-xl">mark_email_read</span>
-            </div>
-            <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-extrabold text-emerald-600">Active</span>
-              <span class="text-xs text-emerald-600 font-semibold">Baileys Engine</span>
-            </div>
-            <p class="text-[11px] text-secondary">Evolution API Spec V2</p>
-          </div>
-        </div>
-
-        <!-- Command Center & Action Panel Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-lg font-bold text-primary">Hospital Command Center</h3>
-                <p class="text-xs text-secondary">Action-oriented tasks requiring front desk intervention</p>
-              </div>
-              <span class="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-full">
-                6 Items Needing Attention
-              </span>
-            </div>
-
-            <!-- Action Cards -->
-            <div class="space-y-3">
-              <div class="p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm flex items-center justify-between gap-4 hover:border-primary/40 transition-all">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
-                    <span class="material-symbols-outlined">help_center</span>
-                  </div>
-                  <div>
-                    <h4 class="text-sm font-bold text-primary">4 Appointments Awaiting Confirmation</h4>
-                    <p class="text-xs text-secondary">Rahul Sharma, Priya Nair, and 2 others requested slot confirmation</p>
-                  </div>
-                </div>
-                <button onclick="navigateTo('appointments')" class="px-3.5 py-1.5 bg-primary text-on-primary font-bold text-xs rounded-lg hover:bg-primary/90 transition-all shrink-0">
-                  Confirm All
-                </button>
-              </div>
-
-              <div class="p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm flex items-center justify-between gap-4 hover:border-primary/40 transition-all">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-                    <span class="material-symbols-outlined">call_received</span>
-                  </div>
-                  <div>
-                    <h4 class="text-sm font-bold text-primary">3 Patients Requested Callbacks</h4>
-                    <p class="text-xs text-secondary">Patient prefers evening calls regarding cardiology reports</p>
-                  </div>
-                </div>
-                <button onclick="navigateTo('conversations')" class="px-3.5 py-1.5 bg-secondary-container text-primary font-bold text-xs rounded-lg hover:bg-secondary-container/80 transition-all shrink-0">
-                  Open Chat
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Right Column: Recommended Actions & Live Queue -->
-          <div class="space-y-6">
-            <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-4">
-              <h3 class="text-sm font-bold text-primary flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-base">format_list_numbered</span>
-                <span>Live Reception Queue</span>
-              </h3>
-
-              <div class="bg-surface p-4 rounded-xl border border-outline-variant/30 text-center space-y-1">
-                <p class="text-xs text-secondary font-medium">Currently Calling Token</p>
-                <p class="text-4xl font-extrabold text-primary tracking-tight">Token #14</p>
-                <p class="text-xs text-emerald-700 font-semibold">Dr. Arjun Mehta • Cabin 4</p>
-              </div>
-
-              <button onclick="navigateTo('queue')" class="w-full py-2 bg-primary-container text-on-primary font-bold text-xs rounded-xl hover:bg-primary-container/90 transition-all">
-                Manage Live Queue
-              </button>
-            </div>
+            <p class="text-[11px] text-secondary">Manual & Prescription Bot</p>
           </div>
         </div>
       </div>
 
-      <!-- ==================== 2. CONVERSATIONS / WHATSAPP INBOX ==================== -->
-      <div id="screen-conversations" class="screen-container hidden h-full flex overflow-hidden">
-        
-        <!-- Left Panel: Conversation List -->
-        <section class="w-80 lg:w-96 bg-surface-container-lowest border-r border-outline-variant/30 flex flex-col shrink-0">
-          <div class="p-4 border-b border-outline-variant/30 space-y-3">
-            <h2 class="text-lg font-bold text-primary">WhatsApp Conversations</h2>
-            
-            <div class="relative">
-              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-sm">search</span>
-              <input class="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-primary text-on-surface" placeholder="Search patients or phone numbers..." type="text"/>
-            </div>
-
-            <!-- Priority Filter Chips -->
-            <div class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide text-xs">
-              <button class="px-3 py-1 rounded-full bg-primary text-on-primary font-semibold whitespace-nowrap">All (5)</button>
-              <button class="px-3 py-1 rounded-full bg-surface text-secondary border border-outline-variant/50 hover:bg-surface-container font-semibold whitespace-nowrap">Unread (2)</button>
-              <button class="px-3 py-1 rounded-full bg-surface text-secondary border border-outline-variant/50 hover:bg-surface-container font-semibold whitespace-nowrap">Follow-up</button>
-              <button class="px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-semibold whitespace-nowrap">Urgent</button>
-            </div>
+      <!-- ==================== 2. FOLLOW-UPS SCREEN ==================== -->
+      <div id="screen-followups" class="screen-container hidden p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-primary">Follow-up Management & Reminders</h2>
+            <p class="text-xs text-secondary">Manually scheduled follow-ups and automated prescription photo extractions.</p>
           </div>
-
-          <!-- Conversation Cards -->
-          <div class="flex-1 overflow-y-auto divide-y divide-outline-variant/20">
-            <div class="p-4 bg-secondary-container/40 border-l-4 border-primary cursor-pointer hover:bg-secondary-container/60 transition-all">
-              <div class="flex justify-between items-start mb-1">
-                <div class="flex items-center gap-3">
-                  <img class="w-10 h-10 rounded-full object-cover shadow-sm" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"/>
-                  <div>
-                    <h3 class="text-sm font-bold text-primary">Robert Chen</h3>
-                    <p class="text-xs text-primary/80 truncate w-36 font-medium">Are my test results ready?</p>
-                  </div>
-                </div>
-                <span class="text-[10px] text-secondary font-medium">10:42 AM</span>
-              </div>
-            </div>
+          <div class="flex items-center gap-3">
+            <button onclick="openPrescriptionModal()" class="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs hover:bg-emerald-100 transition-all flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">photo_camera</span>
+              <span>Scan Prescription Photo</span>
+            </button>
+            <button onclick="openManualFollowupModal()" class="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 transition-all flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">add</span>
+              <span>+ Schedule Manual Follow-up</span>
+            </button>
           </div>
-        </section>
+        </div>
 
-        <!-- Middle Panel: Chat Canvas -->
-        <section class="flex-1 bg-background flex flex-col min-w-0">
-          <div class="h-16 px-6 border-b border-outline-variant/30 bg-surface-container-lowest flex items-center justify-between shrink-0 shadow-sm">
-            <div class="flex items-center gap-3">
-              <img class="w-10 h-10 rounded-full object-cover shadow-sm" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"/>
-              <div>
-                <h2 class="text-base font-bold text-primary">Robert Chen</h2>
-                <p class="text-xs text-secondary flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
-                  <span>Baileys Connected • DOB: 05/12/1975</span>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div id="chat-messages-canvas" class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
-            <div class="flex justify-center">
-              <span class="bg-surface-variant/80 text-on-surface-variant text-[11px] font-semibold px-3 py-1 rounded-full border border-outline-variant/40">
-                Today, August 13, 2026
-              </span>
-            </div>
-
-            <div class="flex flex-col gap-1 items-start max-w-[80%]">
-              <span class="text-[11px] text-secondary ml-1 font-medium">Robert Chen • 10:30 AM</span>
-              <div class="bg-surface-container-lowest border border-outline-variant/30 text-on-surface p-4 rounded-2xl rounded-tl-sm shadow-sm">
-                <p class="text-sm">Good morning. I had my blood drawn yesterday afternoon. Are my test results ready to view in the portal yet?</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Message Composer Area -->
-          <div class="p-4 bg-surface-container-lowest border-t border-outline-variant/30">
-            <form onsubmit="sendChatMessage(event)" class="space-y-3">
-              <div class="flex items-center justify-between text-xs text-secondary px-1">
-                <div class="flex items-center gap-2">
-                  <button type="button" id="note-toggle-btn" onclick="toggleNoteMode()" class="px-2.5 py-1 rounded-lg border border-outline-variant/50 text-secondary hover:bg-surface-container font-semibold flex items-center gap-1 transition-all">
-                    <span class="material-symbols-outlined text-sm">sticky_note_2</span>
-                    <span>Internal Note</span>
-                  </button>
-                </div>
-                <span>Powered by Baileys & Evolution API</span>
-              </div>
-
-              <div class="flex items-end gap-3 bg-background border border-outline-variant/50 rounded-2xl p-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
-                <button type="button" class="p-2 text-secondary hover:text-primary rounded-xl hover:bg-surface-container">
-                  <span class="material-symbols-outlined">attach_file</span>
-                </button>
-                <textarea id="chat-input-textarea" class="w-full bg-transparent border-none focus:ring-0 resize-none text-sm py-2 max-h-32 min-h-[44px]" placeholder="Type a professional response..." rows="1"></textarea>
-                <button type="submit" class="p-2.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center shrink-0">
-                  <span class="material-symbols-outlined text-lg">send</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </section>
+        <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm overflow-hidden">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-surface-container-low border-b border-outline-variant/30 text-xs font-bold text-secondary uppercase tracking-wider">
+                <th class="p-4">Patient Name</th>
+                <th class="p-4">Mobile</th>
+                <th class="p-4">Doctor</th>
+                <th class="p-4">Reason / Notes</th>
+                <th class="p-4">Due Date</th>
+                <th class="p-4">Source</th>
+                <th class="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="followup-table-body" class="divide-y divide-outline-variant/20 text-xs">
+              <!-- Rendered Dynamically from DB -->
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Fallback views -->
-      <div id="screen-patients" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Patients Directory</h2></div>
+      <div id="screen-conversations" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">WhatsApp Inbox</h2></div>
+      <div id="screen-patients" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Patients</h2></div>
       <div id="screen-appointments" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Appointments</h2></div>
       <div id="screen-doctors" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Doctors</h2></div>
       <div id="screen-campaigns" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Campaigns</h2></div>
       <div id="screen-automations" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Automations</h2></div>
-      <div id="screen-followups" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Follow-ups</h2></div>
-      <div id="screen-templates" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Templates</h2></div>
-      <div id="screen-analytics" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Analytics</h2></div>
-      <div id="screen-queue" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Queue Token</h2></div>
-      <div id="screen-healthcamps" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Health Camps</h2></div>
-      <div id="screen-feedback" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Feedback</h2></div>
-      <div id="screen-onboarding" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Onboarding</h2></div>
-      <div id="screen-roles" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Roles & Access</h2></div>
-      <div id="screen-auditlog" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Audit Log</h2></div>
-      <div id="screen-settings" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Settings</h2></div>
     </main>
   </div>
 
-  <!-- FLOATING GUIDED DEMO CONTROLLER BAR -->
-  <div id="demo-guided-bar" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-2xl z-40 border border-slate-700/60 flex items-center gap-6 max-w-2xl w-full mx-4">
-    <div class="flex items-center gap-2">
-      <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
-      <span id="demo-step-counter" class="text-xs font-extrabold text-emerald-300 uppercase tracking-wider">Step 1 of 8</span>
-    </div>
-    <div class="flex-1 min-w-0">
-      <p id="demo-step-title" class="text-xs font-bold truncate">WhatsApp Patient Enquiry</p>
-      <p id="demo-step-text" class="text-[11px] text-slate-300 truncate">Rahul Sharma texts: "I want to book a cardiology appt."</p>
-    </div>
-    <div class="flex items-center gap-2">
-      <button onclick="prevDemoStep()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold">←</button>
-      <button onclick="nextDemoStep()" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs">Next Step →</button>
+  <!-- MODAL: MANUAL FOLLOW-UP SCHEDULER -->
+  <div id="manual-followup-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-surface-container-lowest rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-outline-variant/30 pb-3">
+        <h3 class="text-base font-bold text-primary">Schedule Manual Follow-up</h3>
+        <button onclick="closeManualFollowupModal()" class="text-secondary hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+      </div>
+
+      <form onsubmit="handleManualFollowupSubmit(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="font-bold text-primary block mb-1">Patient Name</label>
+          <input id="fol-patient-name" type="text" placeholder="e.g. Rahul Sharma" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+        </div>
+        <div>
+          <label class="font-bold text-primary block mb-1">Mobile Phone Number</label>
+          <input id="fol-phone" type="text" placeholder="+91 98765 43210" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold text-primary block mb-1">Doctor</label>
+            <select id="fol-doctor" class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary">
+              <option>Dr. Sarah Smith</option>
+              <option>Dr. Arjun Mehta</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-bold text-primary block mb-1">Due Date</label>
+            <input id="fol-due-date" type="date" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+          </div>
+        </div>
+        <div>
+          <label class="font-bold text-primary block mb-1">Follow-up Reason / Notes</label>
+          <input id="fol-reason" type="text" placeholder="e.g. Post-cardiology checkup" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input id="fol-auto-reminder" type="checkbox" checked class="rounded border-outline-variant/40 text-primary focus:ring-primary"/>
+          <label for="fol-auto-reminder" class="text-xs text-secondary font-medium">Send Automated WhatsApp Reminder 24h prior</label>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-outline-variant/30">
+          <button type="button" onclick="closeManualFollowupModal()" class="px-4 py-2 bg-surface text-secondary rounded-xl font-semibold">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90">Save Follow-up</button>
+        </div>
+      </form>
     </div>
   </div>
 
-  <!-- MODAL: BAILEYS & EVOLUTION API WHATSAPP QR CODE SCANNER -->
-  <div id="whatsapp-qr-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-surface-container-lowest rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl text-center">
+  <!-- MODAL: PRESCRIPTION PHOTO SCANNER & AUTO FOLLOW-UP CREATOR -->
+  <div id="prescription-scanner-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-surface-container-lowest rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
       <div class="flex justify-between items-center border-b border-outline-variant/30 pb-3">
         <div class="flex items-center gap-2">
-          <span class="material-symbols-outlined text-emerald-600">qr_code_scanner</span>
-          <h3 class="text-base font-bold text-primary">Pair WhatsApp (Baileys Engine)</h3>
+          <span class="material-symbols-outlined text-emerald-600">photo_camera</span>
+          <h3 class="text-base font-bold text-primary">Scan Prescription Photo</h3>
         </div>
-        <button onclick="closeWhatsAppQRModal()" class="text-secondary hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+        <button onclick="closePrescriptionModal()" class="text-secondary hover:text-primary"><span class="material-symbols-outlined">close</span></button>
       </div>
 
-      <div class="space-y-4">
-        <p class="text-xs text-secondary">Open WhatsApp on your phone $\rightarrow$ Settings $\rightarrow$ Linked Devices $\rightarrow$ Scan this QR Code.</p>
+      <form onsubmit="handlePrescriptionSubmit(event)" class="space-y-4 text-xs">
+        <!-- Photo Upload Box -->
+        <div class="border-2 border-dashed border-emerald-300 bg-emerald-50/50 rounded-2xl p-6 text-center space-y-2 cursor-pointer hover:bg-emerald-50 transition-all">
+          <input id="presc-file-input" type="file" accept="image/*" onchange="previewPrescriptionImage(event)" class="hidden"/>
+          <label for="presc-file-input" class="cursor-pointer block">
+            <div id="presc-upload-placeholder" class="space-y-2">
+              <span class="material-symbols-outlined text-3xl text-emerald-700">upload_file</span>
+              <p class="font-bold text-emerald-950 text-xs">Upload Prescription / Medicine Photo</p>
+              <p class="text-[10px] text-emerald-700">JPG, PNG, WEBP supported (Free Cloud Storage)</p>
+            </div>
+            <img id="presc-img-preview" class="w-full h-40 object-contain hidden rounded-xl"/>
+          </label>
+        </div>
 
-        <!-- QR Code Container -->
-        <div class="w-64 h-64 mx-auto bg-slate-100 rounded-2xl p-4 border border-outline-variant/40 flex items-center justify-center relative shadow-inner">
-          <img id="wa-qr-img" class="w-full h-full object-contain hidden" alt="WhatsApp QR Code"/>
-          <div id="wa-qr-spinner" class="flex flex-col items-center gap-2 text-secondary text-xs">
-            <span class="material-symbols-outlined text-3xl animate-spin text-emerald-600">refresh</span>
-            <span>Fetching Baileys QR Code...</span>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold text-primary block mb-1">Patient Name</label>
+            <input id="presc-patient-name" type="text" placeholder="Rahul Sharma" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+          </div>
+          <div>
+            <label class="font-bold text-primary block mb-1">Follow-up Days Offset</label>
+            <select id="presc-days-offset" class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary">
+              <option value="7">7 Days Later</option>
+              <option value="14">14 Days Later</option>
+              <option value="30">30 Days Later</option>
+            </select>
           </div>
         </div>
 
-        <div class="p-3 bg-surface rounded-xl border border-outline-variant/30 text-xs text-secondary flex items-center justify-between">
-          <span>Status:</span>
-          <span id="modal-wa-status-pill" class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">Connecting...</span>
+        <div class="flex justify-end gap-3 pt-3 border-t border-outline-variant/30">
+          <button type="button" onclick="closePrescriptionModal()" class="px-4 py-2 bg-surface text-secondary rounded-xl font-semibold">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">auto_fix_high</span>
+            <span>Upload & Auto-Schedule</span>
+          </button>
         </div>
-      </div>
+      </form>
+    </div>
+  </div>
 
-      <div class="flex justify-end gap-3 pt-2">
-        <button onclick="refreshWhatsAppQR()" class="w-full py-2.5 bg-primary text-on-primary font-bold text-xs rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
-          <span class="material-symbols-outlined text-base">sync</span>
-          <span>Refresh Session / QR</span>
-        </button>
+  <!-- MODAL: BAILEYS WHATSAPP QR -->
+  <div id="whatsapp-qr-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-surface-container-lowest rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl text-center">
+      <div class="flex justify-between items-center border-b border-outline-variant/30 pb-3">
+        <h3 class="text-base font-bold text-primary">Pair WhatsApp (Baileys Engine)</h3>
+        <button onclick="closeWhatsAppQRModal()" class="text-secondary hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="w-64 h-64 mx-auto bg-slate-100 rounded-2xl p-4 border border-outline-variant/40 flex items-center justify-center shadow-inner">
+        <img id="wa-qr-img" class="w-full h-full object-contain hidden"/>
+        <div id="wa-qr-spinner" class="flex flex-col items-center gap-2 text-secondary text-xs">
+          <span class="material-symbols-outlined text-3xl animate-spin text-emerald-600">refresh</span>
+          <span>Fetching Baileys QR Code...</span>
+        </div>
       </div>
     </div>
   </div>

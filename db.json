@@ -1,0 +1,92 @@
+{
+  "patients": [
+    {
+      "id": "88392",
+      "name": "Robert Chen",
+      "phone": "+1 (555) 283-9942",
+      "dob": "1975-05-12",
+      "doctor": "Dr. Sarah Smith",
+      "lastContact": "10:42 AM Today",
+      "tags": ["Hypertension", "Pending Labs"],
+      "consent": "Opted In",
+      "unread": false,
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
+    },
+    {
+      "id": "88395",
+      "name": "Rahul Sharma",
+      "phone": "+91 98765 43210",
+      "dob": "1984-08-19",
+      "doctor": "Dr. Arjun Mehta",
+      "lastContact": "10:30 AM Today",
+      "tags": ["Cardiology", "Telehealth"],
+      "consent": "Opted In",
+      "unread": true,
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
+    }
+  ],
+  "doctors": [
+    {
+      "id": "doc-1",
+      "name": "Dr. Sarah Smith",
+      "spec": "General Physician",
+      "dept": "Internal Medicine",
+      "exp": "14 Yrs",
+      "apptsToday": 12,
+      "status": "Available Today",
+      "fee": "$80",
+      "photo": "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=300&q=80"
+    },
+    {
+      "id": "doc-2",
+      "name": "Dr. Arjun Mehta",
+      "spec": "Senior Cardiologist",
+      "dept": "Cardiology",
+      "exp": "18 Yrs",
+      "apptsToday": 16,
+      "status": "Available Today",
+      "fee": "$120",
+      "photo": "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=300&q=80"
+    }
+  ],
+  "appointments": [
+    {
+      "id": "appt-101",
+      "patientId": "88395",
+      "patientName": "Rahul Sharma",
+      "doctorId": "doc-2",
+      "doctorName": "Dr. Arjun Mehta",
+      "date": "2026-08-14",
+      "time": "10:30 AM",
+      "dept": "Cardiology",
+      "status": "Confirmed",
+      "token": "Token #14"
+    }
+  ],
+  "followups": [
+    {
+      "id": "fol-1",
+      "patientName": "Robert Chen",
+      "phone": "+1 (555) 283-9942",
+      "doctor": "Dr. Sarah Smith",
+      "reason": "Post-Op Blood Pressure Check",
+      "dueDate": "2026-08-15",
+      "status": "Pending",
+      "autoReminder": true,
+      "source": "Manual"
+    },
+    {
+      "id": "fol-2",
+      "patientName": "Rahul Sharma",
+      "phone": "+91 98765 43210",
+      "doctor": "Dr. Arjun Mehta",
+      "reason": "Prescription Follow-up (Auto Extracted)",
+      "dueDate": "2026-08-20",
+      "status": "Pending",
+      "autoReminder": true,
+      "source": "Prescription OCR Bot"
+    }
+  ],
+  "prescriptions": [],
+  "conversations": []
+}
