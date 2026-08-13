@@ -19,9 +19,15 @@
             "primary": "#031635",
             "primary-container": "#1a2b4b",
             "on-primary": "#ffffff",
+            "on-primary-container": "#8293b8",
             "secondary": "#526069",
             "secondary-container": "#d3e2ed",
+            "on-secondary-container": "#0f1d25",
             "surface": "#f8f9fa",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f3f4f5",
+            "surface-container": "#edeeef",
+            "tertiary-fixed-dim": "#61de8a",
             "tertiary-container": "#e6f7ef",
             "on-tertiary-container": "#005228"
           }
@@ -104,6 +110,16 @@
           <span class="px-2 py-0.5 rounded-full bg-primary text-on-primary text-[10px] font-bold">3</span>
         </a>
 
+        <a href="#" data-screen="patients" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
+          <span class="material-symbols-outlined text-lg">group</span>
+          <span>Patients</span>
+        </a>
+
+        <a href="#" data-screen="doctors" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
+          <span class="material-symbols-outlined text-lg">medical_services</span>
+          <span>Doctors</span>
+        </a>
+
         <a href="#" data-screen="appointments" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
           <span class="material-symbols-outlined text-lg">event</span>
           <span>Appointments</span>
@@ -115,14 +131,9 @@
           <span id="sidebar-followup-badge" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">2</span>
         </a>
 
-        <a href="#" data-screen="patients" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-lg">group</span>
-          <span>Patients</span>
-        </a>
-
-        <a href="#" data-screen="doctors" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
-          <span class="material-symbols-outlined text-lg">medical_services</span>
-          <span>Doctors</span>
+        <a href="#" data-screen="campaigns" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:bg-surface-container transition-all">
+          <span class="material-symbols-outlined text-lg">campaign</span>
+          <span>Bulk Campaigns</span>
         </a>
       </div>
     </aside>
@@ -137,26 +148,59 @@
           <div class="space-y-1 relative z-10">
             <div class="flex items-center gap-2 text-xs font-semibold text-tertiary-fixed-dim">
               <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>Double-Booking Prevention Active</span>
+              <span>All Tabs Fully Operational & Persistent</span>
             </div>
             <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">Good morning, Anjali</h2>
-            <p class="text-on-primary-container text-sm">Conversational WhatsApp onboarding extracts Name, Age, Gender & Prescription photos automatically.</p>
+            <p class="text-on-primary-container text-sm">Add doctors, patients, book appointments, send bulk messages, and scan prescriptions.</p>
           </div>
 
           <div class="flex items-center gap-3 relative z-10">
-            <button onclick="navigateTo('booking')" class="px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-md hover:bg-emerald-400 transition-all flex items-center gap-2">
-              <span class="material-symbols-outlined text-sm">add_circle</span>
-              <span>Book Appointment (Slot Checked)</span>
+            <button onclick="openAddDoctorModal()" class="px-4 py-2.5 rounded-xl bg-white text-primary font-bold text-xs shadow-md hover:bg-slate-100 transition-all flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">person_add</span>
+              <span>+ Add Doctor</span>
             </button>
-            <button onclick="openPrescriptionModal()" class="px-4 py-2.5 rounded-xl bg-white text-primary font-bold text-xs shadow-md hover:bg-slate-100 transition-all flex items-center gap-2">
-              <span class="material-symbols-outlined text-sm">photo_camera</span>
-              <span>Upload Prescription Photo</span>
+            <button onclick="openAddPatientModal()" class="px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-md hover:bg-emerald-400 transition-all flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">group_add</span>
+              <span>+ Add Patient</span>
             </button>
           </div>
         </div>
 
         <!-- Metric Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-2">
+            <div class="flex justify-between items-center text-secondary">
+              <span class="text-xs font-medium">Total Doctors</span>
+              <span class="material-symbols-outlined text-primary text-xl">medical_services</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="metric-doctors-count" class="text-3xl font-extrabold text-primary">2</span>
+              <span class="text-xs text-emerald-600 font-semibold">Active</span>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-2">
+            <div class="flex justify-between items-center text-secondary">
+              <span class="text-xs font-medium">Registered Patients</span>
+              <span class="material-symbols-outlined text-blue-600 text-xl">group</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="metric-patients-count" class="text-3xl font-extrabold text-primary">2</span>
+              <span class="text-xs text-blue-600 font-semibold">In System</span>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-2">
+            <div class="flex justify-between items-center text-secondary">
+              <span class="text-xs font-medium">Appointments Booked</span>
+              <span class="material-symbols-outlined text-emerald-600 text-xl">event</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="metric-appts-count" class="text-3xl font-extrabold text-primary">1</span>
+              <span class="text-xs text-emerald-600 font-semibold">Unbooked Slots Checked</span>
+            </div>
+          </div>
+
           <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-2">
             <div class="flex justify-between items-center text-secondary">
               <span class="text-xs font-medium">Follow-ups Scheduled</span>
@@ -166,33 +210,179 @@
               <span id="metric-followup-count" class="text-3xl font-extrabold text-primary">2</span>
               <span class="text-xs text-emerald-600 font-semibold">Auto Reminders</span>
             </div>
-            <p class="text-[11px] text-secondary">Manual & Prescription Bot</p>
           </div>
         </div>
       </div>
 
-      <!-- ==================== 2. APPOINTMENTS & BOOKING ==================== -->
-      <div id="screen-appointments" class="screen-container hidden p-6 space-y-6 max-w-7xl mx-auto w-full">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 class="text-xl font-bold text-primary">Appointments & Slot Scheduler</h2>
-            <p class="text-xs text-secondary">Booked slots are automatically hidden to prevent double-booking.</p>
+      <!-- ==================== 2. CONVERSATIONS / WHATSAPP INBOX ==================== -->
+      <div id="screen-conversations" class="screen-container hidden h-full flex overflow-hidden">
+        <section class="w-80 lg:w-96 bg-surface-container-lowest border-r border-outline-variant/30 flex flex-col shrink-0">
+          <div class="p-4 border-b border-outline-variant/30 space-y-3">
+            <h2 class="text-lg font-bold text-primary">WhatsApp Conversations</h2>
+            <input class="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3 py-2 text-xs" placeholder="Search chats..." type="text"/>
           </div>
-          <button onclick="navigateTo('booking')" class="px-4 py-2 bg-primary text-on-primary font-bold text-xs rounded-xl hover:bg-primary/90">
-            + New Appointment
+
+          <div id="conversations-list-container" class="flex-1 overflow-y-auto divide-y divide-outline-variant/20">
+            <!-- Rendered Dynamically from DB -->
+          </div>
+        </section>
+
+        <section class="flex-1 bg-background flex flex-col min-w-0">
+          <div class="h-16 px-6 border-b border-outline-variant/30 bg-surface-container-lowest flex items-center justify-between shrink-0 shadow-sm">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container font-bold flex items-center justify-center text-sm">
+                RC
+              </div>
+              <div>
+                <h2 id="active-chat-patient-name" class="text-base font-bold text-primary">Robert Chen</h2>
+                <p class="text-xs text-secondary">WhatsApp Connected • DOB: 05/12/1975</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="chat-messages-canvas" class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+            <div class="flex flex-col gap-1 items-start max-w-[80%]">
+              <span class="text-[11px] text-secondary ml-1 font-medium">Robert Chen • 10:30 AM</span>
+              <div class="bg-surface-container-lowest border border-outline-variant/30 text-on-surface p-4 rounded-2xl rounded-tl-sm shadow-sm">
+                <p class="text-sm">Good morning. Are my test results ready to view in the portal yet?</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 bg-surface-container-lowest border-t border-outline-variant/30">
+            <form onsubmit="sendChatMessage(event)" class="space-y-3">
+              <div class="flex items-end gap-3 bg-background border border-outline-variant/50 rounded-2xl p-2">
+                <textarea id="chat-input-textarea" class="w-full bg-transparent border-none focus:ring-0 resize-none text-sm py-2" placeholder="Type a professional response..." rows="1"></textarea>
+                <button type="submit" class="p-2.5 bg-primary text-on-primary rounded-xl hover:bg-primary/90">
+                  <span class="material-symbols-outlined text-lg">send</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- Right Patient Context -->
+        <aside class="w-80 bg-surface-container-lowest border-l border-outline-variant/30 hidden xl:flex flex-col shrink-0 p-6 space-y-6">
+          <div class="text-center">
+            <h2 id="ctx-patient-name" class="text-lg font-bold text-primary">Robert Chen</h2>
+            <p id="ctx-patient-details" class="text-xs text-secondary">Age: 48 • Male • Lang: English</p>
+          </div>
+          <div class="space-y-2 text-xs">
+            <h3 class="font-bold text-outline uppercase tracking-wider text-[10px]">Primary Care Doctor</h3>
+            <p class="font-bold text-primary">Dr. Sarah Smith</p>
+          </div>
+        </aside>
+      </div>
+
+      <!-- ==================== 3. PATIENTS DIRECTORY ==================== -->
+      <div id="screen-patients" class="screen-container hidden p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-bold text-primary">Patient Directory</h2>
+            <p class="text-xs text-secondary">Manage patient profiles, contact numbers, age, gender, and language preferences.</p>
+          </div>
+          <button onclick="openAddPatientModal()" class="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">person_add</span>
+            <span>+ Add New Patient</span>
           </button>
         </div>
 
         <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm overflow-hidden">
           <table class="w-full text-left border-collapse">
             <thead>
-              <tr class="bg-surface-container-low border-b border-outline-variant/30 text-xs font-bold text-secondary uppercase tracking-wider">
+              <tr class="bg-surface-container-low border-b border-outline-variant/30 text-xs font-bold text-secondary uppercase">
+                <th class="p-4">Patient Name</th>
+                <th class="p-4">Mobile Number</th>
+                <th class="p-4">Age & Gender</th>
+                <th class="p-4">Assigned Doctor</th>
+                <th class="p-4">Consent Status</th>
+                <th class="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="patients-table-body" class="divide-y divide-outline-variant/20 text-xs">
+              <!-- Rendered Dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ==================== 4. DOCTORS DIRECTORY ==================== -->
+      <div id="screen-doctors" class="screen-container hidden p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-bold text-primary">Doctor Directory & Schedules</h2>
+            <p class="text-xs text-secondary">Manage doctor profiles, specializations, consultation fees, and availability.</p>
+          </div>
+          <button onclick="openAddDoctorModal()" class="px-4 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base">add</span>
+            <span>+ Add New Doctor</span>
+          </button>
+        </div>
+
+        <div id="doctors-grid-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- Rendered Dynamically -->
+        </div>
+      </div>
+
+      <!-- ==================== 5. BULK CAMPAIGNS STUDIO ==================== -->
+      <div id="screen-campaigns" class="screen-container hidden p-6 space-y-6 max-w-5xl mx-auto w-full">
+        <div class="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant/30 shadow-sm space-y-6">
+          <div class="border-b border-outline-variant/30 pb-4">
+            <h2 class="text-xl font-bold text-primary">Bulk WhatsApp Broadcast Studio</h2>
+            <p class="text-xs text-secondary">Send bulk messages to registered patients via Baileys API.</p>
+          </div>
+
+          <form onsubmit="handleBulkCampaignSubmit(event)" class="space-y-4 text-xs">
+            <div>
+              <label class="font-bold text-primary block mb-1">Campaign Title</label>
+              <input id="camp-title" type="text" placeholder="e.g. Free Health Camp Reminder" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+            </div>
+
+            <div>
+              <label class="font-bold text-primary block mb-1">Target Patient Segment</label>
+              <select id="camp-segment" class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary">
+                <option value="all">All Patients (Opted In)</option>
+                <option value="cardiology">Cardiology Patients Only</option>
+                <option value="pending_followups">Patients with Pending Follow-ups</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="font-bold text-primary block mb-1">Broadcast Message Text</label>
+              <textarea id="camp-message-text" rows="4" placeholder="Dear {{patient_name}}, City Hospital invites you to..." required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-outline-variant/30">
+              <button type="submit" class="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">send</span>
+                <span>Send Bulk WhatsApp Campaign</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ==================== 6. APPOINTMENTS ==================== -->
+      <div id="screen-appointments" class="screen-container hidden p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-bold text-primary">Appointments & Slot Scheduler</h2>
+            <p class="text-xs text-secondary">Booked slots are automatically hidden to prevent double-booking.</p>
+          </div>
+          <button onclick="navigateTo('booking')" class="px-4 py-2 bg-primary text-on-primary font-bold text-xs rounded-xl hover:bg-primary/90">
+            + Book Appointment
+          </button>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm overflow-hidden">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-surface-container-low border-b border-outline-variant/30 text-xs font-bold text-secondary uppercase">
                 <th class="p-4">Time Slot & Date</th>
                 <th class="p-4">Patient</th>
                 <th class="p-4">Doctor</th>
                 <th class="p-4">Department</th>
                 <th class="p-4">Status & Token</th>
-                <th class="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="appointments-table-body" class="divide-y divide-outline-variant/20 text-xs">
@@ -202,14 +392,12 @@
         </div>
       </div>
 
-      <!-- ==================== 3. BOOKING FORM VIEW ==================== -->
+      <!-- BOOKING FORM -->
       <div id="screen-booking" class="screen-container hidden p-6 space-y-6 max-w-3xl mx-auto w-full">
         <div class="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant/30 shadow-sm space-y-6">
           <div class="border-b border-outline-variant/30 pb-4">
             <h2 class="text-xl font-bold text-primary">Book Appointment (Double-Booking Validation)</h2>
-            <p class="text-xs text-secondary">Only available time slots are displayed below for the selected date and doctor.</p>
           </div>
-
           <form onsubmit="handleBookingSubmit(event)" class="space-y-4 text-xs">
             <div class="grid grid-cols-2 gap-4">
               <div>
@@ -226,8 +414,7 @@
               <div>
                 <label class="font-bold text-primary block mb-1">Select Doctor</label>
                 <select id="booking-doctor-select" onchange="updateAvailableBookingSlots()" class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary font-bold">
-                  <option value="doc-1">Dr. Sarah Smith (General Physician)</option>
-                  <option value="doc-2">Dr. Arjun Mehta (Cardiology)</option>
+                  <!-- Dynamically Rendered -->
                 </select>
               </div>
               <div>
@@ -239,7 +426,7 @@
             <div>
               <label class="font-bold text-primary block mb-1">Available Unbooked Time Slot</label>
               <select id="booking-slot-select" required class="w-full bg-emerald-50 border border-emerald-300 rounded-xl p-3 text-xs text-emerald-950 font-bold focus:ring-emerald-500">
-                <!-- Dynamically Populated with Open Slots Only -->
+                <!-- Dynamically Rendered -->
               </select>
             </div>
 
@@ -251,12 +438,11 @@
         </div>
       </div>
 
-      <!-- ==================== 4. FOLLOW-UPS SCREEN ==================== -->
+      <!-- FOLLOW-UPS -->
       <div id="screen-followups" class="screen-container hidden p-6 space-y-6 max-w-7xl mx-auto w-full">
         <div class="flex justify-between items-center">
           <div>
             <h2 class="text-xl font-bold text-primary">Follow-up Management</h2>
-            <p class="text-xs text-secondary">Manually scheduled follow-ups and automated prescription photo extractions.</p>
           </div>
           <div class="flex items-center gap-3">
             <button onclick="openPrescriptionModal()" class="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs hover:bg-emerald-100 flex items-center gap-2">
@@ -290,11 +476,83 @@
         </div>
       </div>
 
-      <!-- Fallbacks -->
-      <div id="screen-conversations" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">WhatsApp Inbox</h2></div>
-      <div id="screen-patients" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Patients Directory</h2></div>
-      <div id="screen-doctors" class="screen-container hidden p-6 max-w-7xl mx-auto w-full"><h2 class="text-xl font-bold text-primary">Doctors</h2></div>
     </main>
+  </div>
+
+  <!-- MODAL: ADD PATIENT -->
+  <div id="add-patient-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-surface-container-lowest rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-outline-variant/30 pb-3">
+        <h3 class="text-base font-bold text-primary">Add New Patient Profile</h3>
+        <button onclick="closeAddPatientModal()" class="text-secondary hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+      </div>
+
+      <form onsubmit="handleAddPatientSubmit(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="font-bold text-primary block mb-1">Patient Full Name</label>
+          <input id="pat-name" type="text" placeholder="e.g. Ananya Roy" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+        </div>
+        <div>
+          <label class="font-bold text-primary block mb-1">Mobile Phone Number</label>
+          <input id="pat-phone" type="text" placeholder="+91 98112 00491" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold text-primary block mb-1">Age</label>
+            <input id="pat-age" type="number" placeholder="28" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+          </div>
+          <div>
+            <label class="font-bold text-primary block mb-1">Gender</label>
+            <select id="pat-gender" class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary">
+              <option>Female</option>
+              <option>Male</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-outline-variant/30">
+          <button type="button" onclick="closeAddPatientModal()" class="px-4 py-2 bg-surface text-secondary rounded-xl font-semibold">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90">Save Patient</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD DOCTOR -->
+  <div id="add-doctor-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-surface-container-lowest rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-outline-variant/30 pb-3">
+        <h3 class="text-base font-bold text-primary">Add New Doctor Profile</h3>
+        <button onclick="closeAddDoctorModal()" class="text-secondary hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+      </div>
+
+      <form onsubmit="handleAddDoctorSubmit(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="font-bold text-primary block mb-1">Doctor Photo (JPG, PNG)</label>
+          <input id="doc-photo-input" type="file" accept="image/*" class="w-full text-xs text-secondary"/>
+        </div>
+        <div>
+          <label class="font-bold text-primary block mb-1">Doctor Full Name</label>
+          <input id="doc-name" type="text" placeholder="Dr. Priya Patel" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold text-primary block mb-1">Specialization</label>
+            <input id="doc-spec" type="text" placeholder="Cardiologist" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+          </div>
+          <div>
+            <label class="font-bold text-primary block mb-1">Department</label>
+            <input id="doc-dept" type="text" placeholder="Cardiology" required class="w-full bg-surface border border-outline-variant/40 rounded-xl p-2.5 text-xs text-primary"/>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-outline-variant/30">
+          <button type="button" onclick="closeAddDoctorModal()" class="px-4 py-2 bg-surface text-secondary rounded-xl font-semibold">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90">Save Doctor</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- MODAL: MANUAL FOLLOW-UP -->
